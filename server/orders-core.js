@@ -3,6 +3,7 @@
 import { all, get, insert, update, run, tx } from './db.js';
 import { publish, venueChannel, tableChannel } from './realtime.js';
 import { notify } from './webhooks.js';
+import { notifyStaff } from './notify.js';
 import { i18n, parseJson, nowSql, orderCode } from './utils.js';
 
 export const STATUSES = ['new', 'accepted', 'preparing', 'served', 'paid', 'cancelled'];
@@ -133,6 +134,10 @@ function announce(venue, order, event) {
   const table = order.table_id ? get('SELECT token FROM tables WHERE id = ?', order.table_id) : null;
   if (table) publish(tableChannel(table.token), event, order);
   notify(venue, event, order);
+  if (event === 'order.created') {
+    const resumen = order.items.map((li) => `${li.qty}× ${li.name}`).join(', ');
+    notifyStaff(venue, { title: `Pedido nuevo · mesa ${order.table_name}`, body: resumen.slice(0, 140), tag: `order-${order.id}` });
+  }
 }
 
 /**

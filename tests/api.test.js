@@ -656,3 +656,33 @@ describe('carta en varios idiomas', () => {
     assert.equal(en.data.items[0].name, 'Draft beer');
   });
 });
+
+describe('avisos al personal en el móvil', () => {
+  test('la clave pública existe y las suscripciones se guardan y se borran', async () => {
+    await signup(srv.request, { venue_name: 'Push Test' });
+    const k = await srv.request('/api/push/key');
+    assert.equal(k.status, 200);
+    assert.ok(k.data.key.length > 60);
+    assert.equal(k.data.subscriptions, 0);
+
+    const mala = await srv.request('/api/push/subscribe', { method: 'POST', body: { subscription: { endpoint: 'x' } } });
+    assert.equal(mala.status, 400);
+
+    const sub = { endpoint: 'https://push.example.com/abc', keys: { p256dh: 'p', auth: 'a' } };
+    const ok = await srv.request('/api/push/subscribe', { method: 'POST', body: { subscription: sub } });
+    assert.equal(ok.data.subscriptions, 1);
+    const repe = await srv.request('/api/push/subscribe', { method: 'POST', body: { subscription: sub } });
+    assert.equal(repe.data.subscriptions, 1, 'el mismo móvil no se duplica');
+
+    await srv.request('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub.endpoint } });
+    assert.equal((await srv.request('/api/push/key')).data.subscriptions, 0);
+  });
+
+  test('el local guarda su grupo de Telegram y sin bot configurado la prueba lo dice', async () => {
+    await signup(srv.request, { venue_name: 'Telegram Test' });
+    const v = await srv.request('/api/venue', { method: 'PATCH', body: { telegram_chat_id: '-100123' } });
+    assert.equal(v.data.telegram_chat_id, '-100123');
+    const t = await srv.request('/api/push/telegram-test', { method: 'POST' });
+    assert.equal(t.status, 409);
+  });
+});

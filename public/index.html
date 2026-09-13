@@ -376,7 +376,10 @@ const calc = () => {
   const plan = $('#c-plan').value;
   const monthly = PRICE[plan];
   const wedges = $('#c-wedge').value === '1' ? [tables * 900, tables * 1400] : null;
-  $('#calc').innerHTML = `<strong>${money(monthly)} al mes + IVA</strong> — ${money(monthly / tables)} por mesa y mes.
+  const porMesaDia = monthly / tables / 30;
+  $('#calc').innerHTML = `<strong>${money(monthly)} al mes + IVA</strong> — sale a
+    <strong>${money(porMesaDia)}</strong> por mesa y día.
+    <span class="muted">Menos que una servilleta.</span>
     ${wedges ? `<br>Cuñas: un único pago orientativo de <strong>${money(wedges[0])} – ${money(wedges[1])}</strong> + IVA por ${tables} piezas, a coste completo.` : ''}
     ${tables > LIMIT[plan] ? `<br><span class="muted">Con más de ${LIMIT[plan]} mesas te conviene el plan siguiente o un precio a medida.</span>` : ''}`;
 };

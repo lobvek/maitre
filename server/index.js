@@ -16,6 +16,7 @@ import { router as analyticsRouter } from './routes/analytics.js';
 import { router as billingRouter } from './routes/billing.js';
 import { router as adminRouter } from './routes/admin.js';
 import { router as leadsRouter } from './routes/leads.js';
+import { router as pushRouter } from './routes/push.js';
 import { PLANS } from './plans.js';
 
 export function createApp() {
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/api/billing', billingRouter);
   app.use('/api/admin', adminRouter);
   app.use('/api/leads', leadsRouter);
+  app.use('/api/push', pushRouter);
 
   app.get('/api/plans', (_req, res) => res.json(Object.values(PLANS).filter((p) => p.id !== 'paused')));
   app.get('/api/health', (_req, res) => res.json({

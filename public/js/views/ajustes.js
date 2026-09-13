@@ -5,7 +5,7 @@ import { app, refreshChrome } from '/js/app.js';
 const LANGS = { es: 'Castellano', ca: 'Català', en: 'English', fr: 'Français', de: 'Deutsch' };
 
 export async function render(root) {
-  const v = await api('/api/venue');
+  const [v, push] = await Promise.all([api('/api/venue'), api('/api/push/key').catch(() => ({ subscriptions: 0, telegram: false }))]);
   const f = v.features || {};
 
   root.innerHTML = `
@@ -71,6 +71,20 @@ export async function render(root) {
         Quien no quiera pagar por el móvil siempre puede avisar al camarero.
         ${v.plan_features.includes('payments') ? '' : '<br><span class="tag brand">Local</span> El pago con el móvil está en el plan Local.'}</div></div>
         <hr>
+        <h3 style="margin-top:0">Cómo se entera el personal</h3>
+        <p class="muted" style="font-size:13.5px">Los avisos y pedidos entran en la pantalla de sala. Si no tenéis una tablet en barra,
+        que cada camarero active <strong>📳 Avisos</strong> en la pantalla de sala desde su móvil: le suena y vibra aunque
+        esté bloqueado. En iPhone hay que añadir la sala a la pantalla de inicio primero (Compartir → Añadir a inicio).</p>
+        <div class="notice ${push.subscriptions ? 'ok' : ''}" style="margin-bottom:12px">
+          ${push.subscriptions ? `${push.subscriptions} móvil${push.subscriptions === 1 ? '' : 'es'} con avisos activos.` : 'Ningún móvil con avisos activos todavía.'}
+          <button class="btn sm" id="push-test" style="margin-left:8px">Enviar prueba</button></div>
+        <div class="field"><label>Grupo de Telegram del local (opcional)</label>
+          <div class="row"><input id="telegram_chat_id" value="${esc(v.telegram_chat_id || '')}" placeholder="-100123456789" ${push.telegram ? '' : 'disabled'}>
+          <button class="btn sm" id="tg-test" ${push.telegram ? '' : 'disabled'}>Probar</button></div>
+          <div class="help">${push.telegram
+            ? 'Añade el bot de Maitre a vuestro grupo y pega aquí el identificador del chat. Cada aviso y cada pedido llegan también ahí.'
+            : 'Maitre todavía no tiene el bot de Telegram configurado en el servidor (MAITRE_TELEGRAM_BOT_TOKEN).'}</div></div>
+        <hr>
         <h3 style="margin-top:0">Quién puede pedir</h3>
         <div class="field"><select id="order_gate">
           <option value="open" ${v.order_gate === 'open' ? 'selected' : ''}>Cualquiera que escanee el QR</option>
@@ -126,6 +140,12 @@ export async function render(root) {
     b.classList.toggle('primary', langs.has(k));
   });
 
+  $('#push-test').onclick = async () => { await api('/api/push/test', { method: 'POST' }); toast('Prueba enviada a los móviles activos', 'ok'); };
+  $('#tg-test').onclick = async () => {
+    try { await api('/api/push/telegram-test', { method: 'POST', body: { chat_id: $('#telegram_chat_id').value } }); toast('Mensaje enviado al grupo', 'ok'); }
+    catch (err) { toast(err.message, 'err'); }
+  };
+
   $('#pwd').onclick = async () => {
     const body = el('div', { html: `
       <div class="field"><label>Contraseña actual</label><input id="cur" type="password"></div>
@@ -145,6 +165,7 @@ export async function render(root) {
       body.tax_rate = Number($('#tax_rate').value);
       body.payment_mode = $('#payment_mode').value;
       body.order_gate = $('#order_gate').value;
+      if (!$('#telegram_chat_id').disabled) body.telegram_chat_id = $('#telegram_chat_id').value.trim();
       if (!$('#webhook_url').disabled) body.webhook_url = $('#webhook_url').value.trim();
       if ($('#payment_account')) body.payment_account = $('#payment_account').value;
       body.prices_include_tax = $('#prices_include_tax').checked;

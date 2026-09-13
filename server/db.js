@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS venues (
   order_code TEXT DEFAULT '',                -- código de turno cuando order_gate = 'code'
   webhook_url TEXT DEFAULT '',               -- integración con TPV / middleware
   webhook_secret TEXT DEFAULT '',
+  telegram_chat_id TEXT DEFAULT '',          -- avisos al grupo de Telegram del local
   plan TEXT NOT NULL DEFAULT 'trial',       -- trial | mesa | servicio | local | founders | paused
   plan_since TEXT,
   plan_until TEXT,                          -- fin de la oferta Fundadores
@@ -248,6 +249,16 @@ CREATE TABLE IF NOT EXISTS reviews (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  keys TEXT NOT NULL,                       -- {p256dh, auth}
+  user_agent TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS leads (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -289,6 +300,7 @@ const MIGRATIONS = [
   ['tables', 'qr_code', 'TEXT'],
   ['tables', 'lot', "TEXT DEFAULT ''"],
   ['items', 'suggests', "TEXT DEFAULT '[]'"],
+  ['venues', 'telegram_chat_id', "TEXT DEFAULT ''"],
 ];
 
 function migrate(database) {

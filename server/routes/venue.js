@@ -48,6 +48,7 @@ router.patch('/', requireRole('manager'), (req, res) => {
     patch.order_gate = req.body.order_gate;
     if (req.body.order_gate === 'code' && !req.venue.order_code) patch.order_code = newShiftCode();
   }
+  if (req.body.telegram_chat_id !== undefined) patch.telegram_chat_id = String(req.body.telegram_chat_id).trim().slice(0, 40);
   if (req.body.webhook_url !== undefined) {
     const url = String(req.body.webhook_url).trim();
     if (url && !/^https?:\/\//i.test(url)) return bad(res, 'La URL del webhook debe empezar por http:// o https://');

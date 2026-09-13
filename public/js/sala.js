@@ -380,7 +380,38 @@ async function paintGate() {
   }
 }
 
+/** Notificaciones en este móvil: el camarero se entera con el teléfono en el bolsillo. */
+async function setupPush() {
+  const btn = $('#push');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { btn.classList.add('hidden'); return; }
+  const reg = await navigator.serviceWorker.register('/sw.js');
+  const paintBtn = async () => {
+    const sub = await reg.pushManager.getSubscription();
+    btn.textContent = sub ? '📳 Avisos activos' : '📳 Avisos';
+    btn.classList.toggle('green', !!sub);
+    return sub;
+  };
+  await paintBtn();
+  btn.onclick = async () => {
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await api('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub.endpoint } });
+      await sub.unsubscribe(); await paintBtn(); toast('Avisos desactivados en este móvil'); return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return toast('Sin permiso no se pueden enviar avisos. En iPhone, añade la sala a la pantalla de inicio primero.', 'err');
+    const { key } = await api('/api/push/key');
+    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+    const nueva = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
+    await api('/api/push/subscribe', { method: 'POST', body: { subscription: nueva.toJSON() } });
+    await paintBtn();
+    toast('Avisos activados. Te llega una prueba.', 'ok');
+    api('/api/push/test', { method: 'POST' }).catch(() => {});
+  };
+}
+
 function bindChrome() {
+  setupPush().catch((e) => console.warn('push', e.message));
   $('#station').value = state.station;
   $('#station').onchange = (e) => {
     state.station = e.target.value;

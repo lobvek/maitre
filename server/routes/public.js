@@ -6,6 +6,7 @@ import { hasFeature, effectivePlan } from '../plans.js';
 import { subscribe, tableChannel, venueChannel, publish } from '../realtime.js';
 import { createOrder, hydrateOrder, tableBill, settlePayment } from '../orders-core.js';
 import { canChargeOnline, resolveMode, createCheckout, isSandbox } from '../payments.js';
+import { notifyStaff } from '../notify.js';
 import { qrPng } from '../qr.js';
 import { bad, ok, i18n, parseJson, nowSql, uuid, ALLERGENS, TAGS } from '../utils.js';
 
@@ -276,6 +277,8 @@ router.post('/:slug/:token/call', resolve, (req, res) => {
   });
   const call = { ...get('SELECT * FROM calls WHERE id = ?', id), table_name: req.pubTable.name };
   publish(venueChannel(venue.id), 'call.created', call);
+  const motivo = { waiter: 'llama al camarero', bill: 'pide la cuenta', water: 'pide agua', help: 'tiene una duda' }[type];
+  notifyStaff(venue, { title: `Mesa ${req.pubTable.name} ${motivo}`, body: call.note || 'Aviso desde la carta', tag: `call-${req.pubTable.id}` });
   res.status(201).json(call);
 });
 

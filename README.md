@@ -90,6 +90,10 @@ importación y exportación en CSV, disponibilidad por producto, zonas y mesas, 
 rotación de token, etiquetas NFC, hoja de QR imprimible para empezar el primer día, vista previa de la cuña
 modular, elección del modo de cobro (en el local, opcional o previo obligatorio) y de quién puede pedir.
 
+**Sin tablet en barra**: cada camarero activa «📳 Avisos» en la pantalla de sala desde su móvil y le llegan las
+llamadas y pedidos como notificación aunque el teléfono esté bloqueado (Web Push, sin app; en iPhone añadiendo la
+sala a la pantalla de inicio). Opcionalmente, también al grupo de Telegram del local.
+
 En la **pantalla de sala**: pedidos en tiempo real con aviso sonoro, distintivo de «pagado», filtro por
 estación (barra / cocina) con comanda imprimible por separado, lista rápida de agotados («86») sin entrar a
 la carta, estados de mesa, cambio de mesa y unión de mesas con cuenta conjunta, cuenta por mesa y pedido
@@ -170,6 +174,8 @@ El detalle, con ejemplo de carga útil y verificación de firma, está en [`docs
 | `MAITRE_DATA_DIR` | `data/` | Carpeta de base de datos y de imágenes subidas |
 | `PAYMENTS_PROVIDER` | `sandbox` | Pasarela de cobro. Con `sandbox` se simula el pago |
 | `SEED_ON_EMPTY` | — | Con `1`, siembra los datos de demostración si la base está vacía |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | se generan en `data/vapid.json` | Claves de las notificaciones push al móvil del personal |
+| `MAITRE_TELEGRAM_BOT_TOKEN` | — | Token del bot de Maitre para avisar por Telegram a los grupos de los locales |
 | `NODE_ENV` | — | Con `production` la cookie de sesión exige HTTPS |
 
 ## Antes de poner esto en producción
