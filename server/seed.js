@@ -164,7 +164,7 @@ function seedVenue({ slug, name, city, address, plan, isPilot, color, carta, tab
     period_start: addDays(-40).slice(0, 10), period_end: addDays(-10).slice(0, 10), note: 'Piloto de 30 días',
   });
   if (plan !== 'trial') {
-    const precio = { mesa: 1900, servicio: 3900, conectado: 6900, founders: 1900 }[plan] || 0;
+    const precio = { mesa: 1900, servicio: 3900, local: 6900, founders: 1900 }[plan] || 0;
     insert('billing_events', {
       venue_id: venueId, type: 'plan_changed', plan, amount_cents: precio,
       tax_cents: Math.round(precio * 0.21),

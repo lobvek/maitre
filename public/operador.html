@@ -90,7 +90,7 @@ async function locales(view) {
       <tbody>${rows.map((v) => `<tr>
         <td><strong>${esc(v.name)}</strong>${v.is_pilot ? ' <span class="tag amber">piloto</span>' : ''}
           <div class="muted" style="font-size:12.5px">${esc(v.city || '')} · ${esc(v.owner_email || '')}</div></td>
-        <td><span class="tag ${['servicio', 'conectado'].includes(v.effective_plan) ? 'green' : v.effective_plan === 'founders' ? 'brand' : v.effective_plan === 'trial' ? 'amber' : ''}">${esc(v.effective_plan)}</span>
+        <td><span class="tag ${['servicio', 'local'].includes(v.effective_plan) ? 'green' : v.effective_plan === 'founders' ? 'brand' : v.effective_plan === 'trial' ? 'amber' : ''}">${esc(v.effective_plan)}</span>
           ${v.status !== 'active' ? `<span class="tag red">${esc(v.status)}</span>` : ''}</td>
         <td class="num">${v.tables}</td><td class="num">${v.items}</td><td class="num">${v.orders_7d}</td>
         <td class="muted">${v.last_order_at ? fmtDate(v.last_order_at) : '—'}</td>
@@ -106,7 +106,7 @@ async function locales(view) {
     const v = rows.find((x) => x.id === Number(b.dataset.v));
     const body = el('div', { html: `
       <div class="field"><label>Plan</label><select id="plan">
-        ${[['trial', 'Piloto (30 días)'], ['mesa', 'Mesa · 19 €'], ['servicio', 'Servicio · 39 €'], ['conectado', 'Conectado · 69 €'],
+        ${[['trial', 'Piloto (30 días)'], ['mesa', 'Mesa · 19 €'], ['servicio', 'Servicio · 39 €'], ['local', 'Local · 69 €'],
            ['founders', 'Fundadores · 19 € durante 24 meses'], ['paused', 'En pausa']]
           .map(([p, n]) => `<option value="${p}" ${v.plan === p ? 'selected' : ''}>${n}</option>`).join('')}
       </select></div>

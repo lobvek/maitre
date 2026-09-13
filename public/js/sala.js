@@ -42,9 +42,17 @@ function beep(veces = 1) {
   }
 }
 
+const can = (f) => state.me?.venue?.plan_features?.includes(f);
+
 async function boot() {
   try { state.me = await api('/api/auth/me'); }
   catch { location.href = '/entrar?next=/sala'; return; }
+  // Plan Mesa: pantalla de sala sencilla. Lo avanzado (barra/cocina, comandas, 86) es del plan Servicio.
+  if (!can('kds')) {
+    $('#station').classList.add('hidden');
+    $('#agotados').classList.add('hidden');
+    state.station = '';
+  }
   $('#venue').textContent = state.me.venue?.name || 'Sala';
   document.title = `Sala · ${state.me.venue?.name || 'Maitre'}`;
   if (state.me.venue?.brand_color) document.documentElement.style.setProperty('--brand', state.me.venue.brand_color);
@@ -150,7 +158,7 @@ function ticket(o, col) {
     ${o.note ? `<div style="padding:0 12px 8px" class="opts">📝 ${esc(o.note)}</div>` : ''}
     ${o.guest_name ? `<div style="padding:0 12px 8px" class="opts">👤 ${esc(o.guest_name)}</div>` : ''}
     <footer><strong>${money(o.total_cents)}</strong><span class="grow"></span>
-      <button class="btn sm ghost" data-print="${o.id}" title="Imprimir comanda">⎙</button>
+      ${can('kds') ? `<button class="btn sm ghost" data-print="${o.id}" title="Imprimir comanda">⎙</button>` : ''}
       <button class="btn sm ghost" data-cancel="${o.id}" title="Cancelar">✕</button>
       <button class="btn sm primary" data-adv="${o.id}">${o.status === 'served' && o.payment_status === 'paid' ? 'Cerrar' : col.next}</button></footer>
   </div>`;
@@ -268,7 +276,7 @@ async function openTable(id) {
     </tbody></table>
     <div class="row" style="margin-top:14px"><button class="btn green grow" id="close-table">Cobrar toda la mesa</button></div>`
       : '<div class="empty">Sin consumiciones abiertas.</div>'}
-    <hr>
+    ${can('tables') ? `<hr>
     <div class="row wrap-row">
       <select id="destino" style="width:auto">
         ${state.tables.filter((x) => x.id !== id).map((x) => `<option value="${x.id}">Mesa ${esc(x.name)}</option>`).join('')}
@@ -277,16 +285,16 @@ async function openTable(id) {
       <button class="btn sm" id="unir">Unir a esa mesa</button>
       ${t.merged_into_name || t.merged_names ? '<button class="btn sm" id="separar">Separar mesas</button>' : ''}
     </div>
-    <div class="help">«Cambiar de mesa» se lleva todo lo abierto. «Unir» hace que se cobre en una sola cuenta.</div>
+    <div class="help">«Cambiar de mesa» se lleva todo lo abierto. «Unir» hace que se cobre en una sola cuenta.</div>` : ''}
     <div class="fse" style="margin-top:16px">QR de la mesa: <span class="mono">${esc(t.url)}</span></div>` });
 
   const destino = () => Number(body.querySelector('#destino').value);
   const cerrar = () => document.querySelector('.modal-bg')?.remove();
-  body.querySelector('#mover').onclick = async () => {
+  if (body.querySelector('#mover')) body.querySelector('#mover').onclick = async () => {
     const r = await api(`/api/tables/${id}/move`, { method: 'POST', body: { to: destino() } });
     cerrar(); toast(`${r.moved} pedido(s) movidos de la ${r.from} a la ${r.to}`, 'ok'); await refresh();
   };
-  body.querySelector('#unir').onclick = async () => {
+  if (body.querySelector('#unir')) body.querySelector('#unir').onclick = async () => {
     try {
       const r = await api(`/api/tables/${id}/merge`, { method: 'POST', body: { into: destino() } });
       cerrar(); toast(`Mesa ${r.table} unida a la ${r.into}`, 'ok'); await refresh();

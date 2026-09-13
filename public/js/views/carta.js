@@ -5,6 +5,28 @@ import { app, can, hasFeature } from '/js/app.js';
 let cats = [], items = [], catalog = null, sel = null;
 const langOf = () => app.venue.locale || 'es';
 const nameIn = (obj) => obj?.[langOf()] || obj?.es || Object.values(obj || {})[0] || '';
+const LANG_NAMES = { es: 'Castellano', ca: 'Català', en: 'English', fr: 'Français', de: 'Deutsch' };
+const langs = () => {
+  const list = app.venue.languages?.length ? [...app.venue.languages] : [langOf()];
+  return list.includes(langOf()) ? [langOf(), ...list.filter((l) => l !== langOf())] : list;
+};
+
+/** Campos de texto por idioma. Con un solo idioma es un input normal; con varios, uno por idioma. */
+function i18nFields(prefix, label, value = {}, { textarea = false } = {}) {
+  const many = langs().length > 1;
+  return langs().map((l, i) => {
+    const v = esc(value?.[l] || '');
+    const input = textarea
+      ? `<textarea id="${prefix}-${l}" rows="2" data-i18n="${prefix}" data-lang="${l}">${v}</textarea>`
+      : `<input id="${prefix}-${l}" value="${v}" data-i18n="${prefix}" data-lang="${l}">`;
+    return `<div class="field"><label>${label}${many ? ` · ${LANG_NAMES[l] || l.toUpperCase()}` : ''}${many && i > 0 ? ' <span class="muted" style="font-weight:400">(si se deja vacío, se muestra en ' + (LANG_NAMES[langOf()] || langOf()) + ')</span>' : ''}</label>${input}</div>`;
+  }).join('');
+}
+function readI18n(root, prefix) {
+  const out = {};
+  root.querySelectorAll(`[data-i18n="${prefix}"]`).forEach((el2) => { const v = el2.value.trim(); if (v) out[el2.dataset.lang] = v; });
+  return out;
+}
 
 export async function render(root) {
   [cats, items, catalog] = await Promise.all([
@@ -85,8 +107,8 @@ function paint() {
 
 async function editCategory(cat) {
   const body = el('div', { html: `
-    <div class="field"><label>Nombre</label><input id="name" value="${esc(cat ? nameIn(cat.name) : '')}"></div>
-    <div class="field"><label>Descripción (opcional)</label><input id="desc" value="${esc(cat ? nameIn(cat.description) : '')}"></div>
+    ${i18nFields('name', 'Nombre', cat?.name)}
+    ${i18nFields('desc', 'Descripción (opcional)', cat?.description)}
     <div class="field"><label>¿A dónde va esta comanda?</label><select id="station">
       <option value="" ${!cat?.station ? 'selected' : ''}>Sin separar</option>
       <option value="barra" ${cat?.station === 'barra' ? 'selected' : ''}>Barra (bebidas)</option>
@@ -114,13 +136,13 @@ async function editCategory(cat) {
     title: cat ? 'Editar categoría' : 'Nueva categoría', body,
     onSave: async (r) => {
       const payload = {
-        name: r.querySelector('#name').value.trim(),
-        description: r.querySelector('#desc').value.trim(),
+        name: readI18n(r, 'name'),
+        description: readI18n(r, 'desc'),
         station: r.querySelector('#station').value,
         available_from: r.querySelector('#from').value || null,
         available_to: r.querySelector('#to').value || null,
       };
-      if (!payload.name) throw new Error('Pon un nombre a la categoría.');
+      if (!payload.name[langOf()]) throw new Error(`Pon el nombre en ${LANG_NAMES[langOf()] || langOf()}.`);
       return cat ? api(`/api/menu/categories/${cat.id}`, { method: 'PATCH', body: payload })
         : api('/api/menu/categories', { method: 'POST', body: payload });
     },
@@ -130,8 +152,8 @@ async function editCategory(cat) {
 
 async function editItem(item) {
   const body = el('div', { html: `
-    <div class="field"><label>Nombre</label><input id="name" value="${esc(item ? nameIn(item.name) : '')}"></div>
-    <div class="field"><label>Descripción</label><textarea id="desc" rows="2">${esc(item ? nameIn(item.description) : '')}</textarea></div>
+    ${i18nFields('name', 'Nombre', item?.name)}
+    ${i18nFields('desc', 'Descripción', item?.description, { textarea: true })}
     <div class="field-row">
       <div class="field"><label>Precio (€)</label><input id="price" type="number" step="0.05" min="0" value="${item ? (item.price_cents / 100).toFixed(2) : ''}"></div>
       <div class="field"><label>Categoría</label><select id="cat">
@@ -229,8 +251,8 @@ async function editItem(item) {
     title: item ? 'Editar producto' : 'Nuevo producto', body, wide: true,
     onSave: async (r) => {
       const payload = {
-        name: r.querySelector('#name').value.trim(),
-        description: r.querySelector('#desc').value.trim(),
+        name: readI18n(r, 'name'),
+        description: readI18n(r, 'desc'),
         price: Number(r.querySelector('#price').value) || 0,
         cost: Number(r.querySelector('#cost').value) || 0,
         kcal: r.querySelector('#kcal').value === '' ? null : Number(r.querySelector('#kcal').value),
@@ -238,7 +260,7 @@ async function editItem(item) {
         allergens: [...picked.allergens], tags: [...picked.tags],
         ...(item && hasFeature('upsell') ? { suggests: [...picked.suggests] } : {}),
       };
-      if (!payload.name) throw new Error('El producto necesita un nombre.');
+      if (!payload.name[langOf()]) throw new Error(`El producto necesita nombre en ${LANG_NAMES[langOf()] || langOf()}.`);
       const out = item ? await api(`/api/menu/items/${item.id}`, { method: 'PATCH', body: payload })
         : await api('/api/menu/items', { method: 'POST', body: payload });
       const file = r.querySelector('#img')?.files?.[0];

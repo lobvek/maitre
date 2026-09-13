@@ -29,7 +29,7 @@ router.get('/', (req, res) => {
   });
 });
 
-/** POST /api/billing/plan { plan: 'mesa'|'servicio'|'conectado' } — Fundadores lo asigna Maitre. */
+/** POST /api/billing/plan { plan: 'mesa'|'servicio'|'local' } — Fundadores lo asigna Maitre. */
 router.post('/plan', requireRole('owner'), (req, res) => {
   const target = String(req.body.plan || '');
   if (!SELF_SERVICE.includes(target)) return bad(res, 'Plan no válido.');

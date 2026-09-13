@@ -56,6 +56,8 @@
   .price-card li { padding: 6px 0; border-top: 1px solid var(--line-2); }
 
   .compare td:first-child { font-weight: 600; }
+  .compare th, .compare td { font-size: 13px; white-space: nowrap; }
+  .compare td:not(:first-child) { color: var(--ink-2); }
   .steps { counter-reset: s; display: grid; gap: 18px; }
   .step { display: flex; gap: 16px; }
   .step .n { counter-increment: s; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 700; font-family: var(--serif); }
@@ -76,6 +78,7 @@
     <a class="link" href="#producto">Producto</a>
     <a class="link" href="#piloto">Piloto</a>
     <a class="link" href="#precios">Precios</a>
+    <a class="link" href="#futuro">Futuro</a>
     <a class="link" href="#contacto">Contacto</a>
     <a class="btn sm" href="/entrar">Entrar</a>
     <a class="btn sm primary" href="#contacto">Pedir un piloto</a>
@@ -193,9 +196,11 @@
         <div class="amount">19 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
         <ul>
           <li>Carta móvil, idiomas y alérgenos</li>
-          <li>QR administrable por mesa</li>
+          <li>QR administrable por mesa y hoja de QR</li>
+          <li>Pedido desde la mesa, con variantes y extras</li>
+          <li>Confirmación y estado del pedido</li>
           <li>Aviso al personal con motivo</li>
-          <li>Analítica básica</li>
+          <li>Pantalla de sala sencilla para recibir pedidos</li>
           <li>Hasta 40 mesas</li>
         </ul>
         <a class="btn block" href="#contacto">Empezar</a>
@@ -205,22 +210,24 @@
         <div class="amount">39 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
         <ul>
           <li>Todo lo del plan Mesa</li>
-          <li>Pedido desde la mesa con confirmación y estado</li>
-          <li>Cola de sala y cocina, agotados, comandas</li>
-          <li>Variantes, extras y sugerencias</li>
-          <li>Equipo con roles y gestión de mesas</li>
+          <li>Barra y cocina por separado, comanda imprimible</li>
+          <li>Agotados en un toque y sugerencias al pedir</li>
+          <li>Cambio y unión de mesas</li>
+          <li>Equipo con roles y permisos</li>
+          <li>Analítica: ventas, ticket, esperas, lo más vendido</li>
+          <li>Hasta 80 mesas</li>
         </ul>
         <a class="btn primary block" href="#contacto">Pedir el piloto</a>
       </div>
       <div class="price-card">
-        <h3>Conectado</h3>
+        <h3>Local</h3>
         <div class="amount">69 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
         <ul>
           <li>Todo lo del plan Servicio</li>
           <li>Integración con tu TPV (webhook firmado)</li>
           <li>Pago con el móvil, opcional</li>
           <li>Reseñas y opt-in tras el servicio</li>
-          <li>Varios locales</li>
+          <li>Varios locales en una cuenta</li>
         </ul>
         <a class="btn block" href="#contacto">Hablar con nosotros</a>
       </div>
@@ -234,9 +241,9 @@
       <div class="row wrap-row" style="align-items:flex-end">
         <div style="min-width:150px"><label>Mesas</label><input type="number" id="c-tables" min="1" max="200" value="18"></div>
         <div style="min-width:220px"><label>Plan</label><select id="c-plan">
-          <option value="mesa">Mesa · carta y avisos</option>
-          <option value="servicio" selected>Servicio · pedido desde la mesa</option>
-          <option value="conectado">Conectado · TPV y pagos</option>
+          <option value="mesa">Mesa · carta, pedido y avisos</option>
+          <option value="servicio" selected>Servicio · sala completa y analítica</option>
+          <option value="local">Local · TPV y pagos</option>
         </select></div>
         <div style="min-width:190px"><label>Cuñas de madera</label><select id="c-wedge">
           <option value="0">No, empiezo con la hoja de QR</option>
@@ -250,21 +257,24 @@
       mientras tanto empiezas con la hoja de QR. Durante el piloto se dejan con depósito.</p>
     </div>
 
-    <div class="card" style="max-width:1000px;margin:20px auto 0">
+    <div class="card" style="max-width:1000px;margin:20px auto 0;overflow-x:auto">
       <h3>Dónde queda frente a lo que hay</h3>
-      <table class="compare"><thead><tr><th></th><th>Cuota</th><th>Instalación</th><th>% por pedido</th><th>¿Cambias de sistema?</th></tr></thead>
+      <p class="muted" style="font-size:13.5px">Por precio, siempre habrá una carta QR más barata. La diferencia está en lo que
+      pasa en el local: quién te lo instala, qué hay en la mesa y si el flujo de sala aguanta un viernes por la noche.</p>
+      <table class="compare"><thead><tr>
+        <th></th><th>Cuota</th><th>Sin cambiar tu TPV</th><th>Sin % por pedido</th><th>Instalación en tu local</th>
+        <th>Pieza física en la mesa</th><th>Barra y cocina separadas</th><th>Piloto medido</th></tr></thead>
         <tbody>
-          <tr><td>Maitre</td><td>19 – 69 €/mes</td><td>0 €</td><td>0 %</td><td>No, convive con tu TPV</td></tr>
-          <tr><td>MesaCarta</td><td>10 – 15 €/mes</td><td>—</td><td>—</td><td>No (carta QR)</td></tr>
-          <tr><td>Honei</td><td>a medida / por uso</td><td>—</td><td>vinculado al pago</td><td>No, pero pagos integrados</td></tr>
-          <tr><td>Last.app</td><td>50 – 175 €/mes</td><td>500 €</td><td>1,5 % en QR</td><td>Sí, es tu TPV</td></tr>
-          <tr><td>Qamarero</td><td>119 – 249 €/mes</td><td>—</td><td>—</td><td>Sí, todo en uno</td></tr>
-          <tr><td>Cegid Revo</td><td>desde 838 €/año</td><td>según distribuidor</td><td>—</td><td>Sí, TPV iPad</td></tr>
+          <tr><td>Maitre</td><td>19 – 69 €/mes</td><td>✓</td><td>✓</td><td>✓ en 72 h</td><td>✓ cuña de madera modular</td><td>✓</td><td>✓ 30 días con objetivos</td></tr>
+          <tr><td>MesaCarta</td><td>10 – 15 €/mes</td><td>✓</td><td>✓</td><td>— autoservicio</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Honei</td><td>a medida / por uso</td><td>✓</td><td>— ligado al pago</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Last.app</td><td>50 – 175 €/mes + 500 €</td><td>— es tu TPV</td><td>— 1,5 % en QR</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
+          <tr><td>Qamarero</td><td>119 – 249 €/mes</td><td>— todo en uno</td><td>✓</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
+          <tr><td>Cegid Revo</td><td>desde 838 €/año</td><td>— TPV iPad</td><td>✓</td><td>✓ distribuidor</td><td>—</td><td>✓</td><td>—</td></tr>
         </tbody></table>
       <p class="muted" style="font-size:12px;margin:10px 0 0">Tarifas públicas consultadas el 11 de septiembre de 2026, sin IVA
-      salvo indicación. No todos los productos son comparables ni incluyen hardware, implantación o comisiones de pago.
-      Maitre no pretende ser lo más barato del mercado: pretende ser mucho más barato y menos arriesgado que cambiar de
-      sistema, y más fiable que una carta QR de bajo coste.</p>
+      salvo indicación; «—» significa que no lo ofrecen o no lo publican. No todos los productos son comparables ni incluyen
+      hardware, implantación o comisiones de pago.</p>
     </div>
   </div>
 </section>
@@ -281,6 +291,27 @@
         <div class="muted">Revisión semanal durante el piloto. Las cuñas de madera con tu logo llegan en unos días y sustituyen la hoja provisional.</div></div></div>
       <div class="step"><div class="n"></div><div><strong>Día 30 · Decidimos con datos</strong>
         <div class="muted">Uso por mesa, esperas, ticket, incidencias. Contratas, ampliamos por una causa concreta o retiramos el material. Sin dramas.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="futuro">
+  <div class="wrap" style="max-width:860px">
+    <div class="section-title"><h2>Hacia dónde vamos</h2>
+      <p class="muted">Empezamos por la mesa porque es donde más se nota. Lo siguiente lo marcan los locales que ya lo usan,
+      no un calendario. Sin fechas, por honestidad.</p></div>
+    <div class="grid g2">
+      <div class="card"><span class="tag green">Ahora</span><h3 style="margin-top:10px">La mesa</h3>
+        <p class="muted" style="font-size:14px;margin:0">Carta, pedido, llamada, estado, sala y cocina, cuña de madera, piloto medido.</p></div>
+      <div class="card"><span class="tag amber">Siguiente</span><h3 style="margin-top:10px">Conectar</h3>
+        <p class="muted" style="font-size:14px;margin:0">Conectores nativos con los TPV más usados (empezaremos por el que más pidan
+        los locales), pago con el móvil, reseñas y opt-in, varios locales en una cuenta.</p></div>
+      <div class="card"><span class="tag">Después</span><h3 style="margin-top:10px">Ahorrar tiempo de verdad</h3>
+        <p class="muted" style="font-size:14px;margin:0">Módulos para la cuña (lámpara, cargador), estados de mesa por NFC para el personal,
+        automatizaciones pequeñas y verificables sobre los datos de sala.</p></div>
+      <div class="card"><span class="tag">Horizonte</span><h3 style="margin-top:10px">Trastienda</h3>
+        <p class="muted" style="font-size:14px;margin:0">Costes y escandallos, inventario, personal y proveedores. Solo cuando haya
+        volumen de datos y locales que lo pidan y lo paguen; antes, integraremos con quien ya lo hace bien.</p></div>
     </div>
   </div>
 </section>
@@ -338,8 +369,8 @@ import { api, $, toast, money } from '/js/core.js';
 
 $('#qr').innerHTML = `<img src="/api/public/bar-lancora/qr.png?size=200" onerror="this.style.display='none'" style="width:100%" alt="">`;
 
-const PRICE = { mesa: 1900, servicio: 3900, conectado: 6900 };
-const LIMIT = { mesa: 40, servicio: 80, conectado: 200 };
+const PRICE = { mesa: 1900, servicio: 3900, local: 6900 };
+const LIMIT = { mesa: 40, servicio: 80, local: 200 };
 const calc = () => {
   const tables = Math.max(1, Number($('#c-tables').value) || 1);
   const plan = $('#c-plan').value;

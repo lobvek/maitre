@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS venues (
   order_code TEXT DEFAULT '',                -- código de turno cuando order_gate = 'code'
   webhook_url TEXT DEFAULT '',               -- integración con TPV / middleware
   webhook_secret TEXT DEFAULT '',
-  plan TEXT NOT NULL DEFAULT 'trial',       -- trial | mesa | servicio | conectado | founders | paused
+  plan TEXT NOT NULL DEFAULT 'trial',       -- trial | mesa | servicio | local | founders | paused
   plan_since TEXT,
   plan_until TEXT,                          -- fin de la oferta Fundadores
   pilot TEXT DEFAULT '{}',                  -- diseño del piloto: objetivo, baseline, fechas, depósito
@@ -301,6 +301,7 @@ function migrate(database) {
   // Planes de la primera hipótesis de precios → arquitectura del estudio competitivo.
   database.exec(`UPDATE venues SET plan = 'mesa' WHERE plan = 'basic'`);
   database.exec(`UPDATE venues SET plan = 'servicio' WHERE plan = 'pro'`);
+  database.exec(`UPDATE venues SET plan = 'local' WHERE plan = 'conectado'`);
   // Cada mesa recibe un código permanente para la madera.
   const sinCodigo = database.prepare('SELECT id FROM tables WHERE qr_code IS NULL').all();
   const upd = database.prepare('UPDATE tables SET qr_code = ? WHERE id = ?');

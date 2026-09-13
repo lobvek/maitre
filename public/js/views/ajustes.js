@@ -69,7 +69,7 @@ export async function render(root) {
         </select>
         <div class="help">Con cobro previo, el pedido no aparece en la pantalla de sala hasta que el pago se confirma.
         Quien no quiera pagar por el móvil siempre puede avisar al camarero.
-        ${v.plan_features.includes('payments') ? '' : '<br><span class="tag brand">Conectado</span> El pago con el móvil está en el plan Conectado.'}</div></div>
+        ${v.plan_features.includes('payments') ? '' : '<br><span class="tag brand">Local</span> El pago con el móvil está en el plan Local.'}</div></div>
         <hr>
         <h3 style="margin-top:0">Quién puede pedir</h3>
         <div class="field"><select id="order_gate">
@@ -104,7 +104,7 @@ export async function render(root) {
           <input id="webhook_url" value="${esc(v.webhook_url || '')}" placeholder="https://tu-tpv.example.com/maitre" ${v.plan_features.includes('integrations') ? '' : 'disabled'}>
           <div class="help">Maitre enviará ahí cada pedido (creado, pagado, servido) firmado con HMAC-SHA256.
           Es la vía de integración mientras preparamos los conectores nativos.
-          ${v.plan_features.includes('integrations') ? '' : '<br><span class="tag brand">Conectado</span> Las integraciones están en el plan Conectado.'}
+          ${v.plan_features.includes('integrations') ? '' : '<br><span class="tag brand">Local</span> Las integraciones están en el plan Local.'}
           ${v.webhook_secret ? `<br>Clave de firma: <span class="mono">${esc(v.webhook_secret)}</span>` : ''}</div></div>
         <hr>
         <h3>Seguridad</h3>
@@ -161,7 +161,7 @@ export async function render(root) {
 }
 
 function toggle(id, label, help, checked, allowed) {
-  const plan = { reviews: 'Conectado' }[id] || 'Servicio';
+  const plan = { reviews: 'Local' }[id] || 'Servicio';
   return `<label class="row" style="align-items:flex-start;padding:10px 0;border-top:1px solid var(--line-2)">
     <input type="checkbox" data-toggle="${id}" ${checked && allowed ? 'checked' : ''} ${allowed ? '' : 'disabled'} style="margin-top:3px">
     <span class="grow"><strong>${label}</strong> ${allowed ? '' : `<span class="tag brand">${plan}</span>`}

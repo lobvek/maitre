@@ -36,7 +36,7 @@ function paintChrome() {
   const plan = app.venue?.effective_plan;
   const chip = {
     trial: ['amber', `Piloto · ${app.venue.trial_days_left} días`], mesa: ['', 'Plan Mesa'], servicio: ['green', 'Plan Servicio'],
-    conectado: ['green', 'Plan Conectado'], founders: ['brand', 'Fundadores'], paused: ['red', 'Sin plan'],
+    local: ['green', 'Plan Local'], founders: ['brand', 'Fundadores'], paused: ['red', 'Sin plan'],
   }[plan] || ['', plan];
   $('#plan-chip').innerHTML = `<a href="#/facturacion" class="tag ${chip[0]}" style="text-decoration:none">${chip[1]}</a>`;
 }

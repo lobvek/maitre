@@ -93,13 +93,13 @@ public/
 | El estudio dice | En el software |
 |---|---|
 | Opción C: capa de mesa, no carta QR ni TPV | Posicionamiento y copy de la web reescritos; nunca «carta QR» |
-| Precios Mesa 19 / Servicio 39 / Conectado 69 / Fundadores 19 × 24 meses | `plans.js`; Fundadores solo lo asigna el operador |
+| Precios Mesa 19 / Servicio 39 / Local 69 / Fundadores 19 × 24 meses | `plans.js`; reparto revisado el 13-09 (pedido en Mesa, analítica en Servicio); Fundadores solo lo asigna el operador |
 | Piloto = experimento con objetivo, baseline, revisión semanal y decisión | Diseño del piloto por local + cuadro de mando con los 4 criterios de éxito |
 | QR administrable y lote en la cuña | Código permanente `/q/…` grabado; token y dominio cambian sin regrabar |
 | Hardware a coste completo, depósito en piloto | Copy de precios y campo de depósito en el piloto |
 | Fase 1: upselling, reseñas, opt-in | Sugerencias por plato; valoración tras el servicio con opt-in |
 | Fiabilidad: el pedido no puede perderse | Alarma en sala a los 3 min sin aceptar; «pedidos perdidos» en el cuadro del piloto |
-| Pago y TPV: fase 2 | Pago con el móvil e integraciones solo en Conectado |
+| Pago y TPV: fase 2 | Pago con el móvil e integraciones solo en Local |
 | No ser sistema fiscal (VERI*FACTU) | La cuenta se presenta como resumen de consumo, no ticket |
 | Métricas (tabla 12) | % mesas que escanean/piden/llaman, tiempo a aceptar, ticket vs base, retención semana 4 |
 

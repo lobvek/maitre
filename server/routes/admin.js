@@ -25,7 +25,7 @@ router.get('/overview', (_req, res) => {
     if (v.status !== 'active') continue;
     if (v.plan === 'trial') trials++;
     if (v.is_pilot) pilots++;
-    if (['mesa', 'servicio', 'conectado', 'founders'].includes(v.plan)) { mrr += PLANS[v.plan].price_cents; paying++; }
+    if (['mesa', 'servicio', 'local', 'founders'].includes(v.plan)) { mrr += PLANS[v.plan].price_cents; paying++; }
   }
   const activity = get(`SELECT COUNT(*) AS orders, COALESCE(SUM(total_cents),0) AS gmv_cents
     FROM orders WHERE date(created_at) >= date('now','-30 day')`);
@@ -65,7 +65,7 @@ router.patch('/venues/:id', (req, res) => {
   const v = get('SELECT * FROM venues WHERE id = ?', Number(req.params.id));
   if (!v) return bad(res, 'Local no encontrado.', 404);
   const patch = {};
-  if (req.body.plan && ['trial', 'mesa', 'servicio', 'conectado', 'founders', 'paused'].includes(req.body.plan)) {
+  if (req.body.plan && ['trial', 'mesa', 'servicio', 'local', 'founders', 'paused'].includes(req.body.plan)) {
     patch.plan = req.body.plan;
     patch.plan_since = nowSql();
     // Fundadores: plan Servicio a 19 € durante 24 meses; después pasa al precio público.

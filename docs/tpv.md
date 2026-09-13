@@ -16,7 +16,7 @@ propia API (o no tiene ninguna). Se promete lo que hay hoy y se explica el plan.
 **1. Convivencia.** El local sigue cobrando en su TPV. Maitre aporta la carta, el pedido y el aviso;
 la comanda se imprime desde la pantalla de sala, separada por barra y cocina.
 
-**2. Webhook firmado.** En *Ajustes → Conexión con tu TPV* se pega una URL. Maitre envía ahí cada evento:
+**2. Webhook firmado** (plan Local). En *Ajustes → Conexión con tu TPV* se pega una URL. Maitre envía ahí cada evento:
 
 ```http
 POST https://tu-tpv.example.com/maitre

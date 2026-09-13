@@ -24,7 +24,7 @@ export async function render(root) {
           <p class="muted" style="font-size:13.5px">${esc(p.tagline)}</p>
           <ul style="list-style:none;padding:0;margin:0 0 16px;font-size:14px">
             ${(() => {
-              const prev = { servicio: 'mesa', conectado: 'servicio' }[p.id];
+              const prev = { servicio: 'mesa', local: 'servicio' }[p.id];
               const base = prev ? b.plans.find((x) => x.id === prev)?.features || [] : [];
               const extra = p.features.filter((f) => !base.includes(f));
               return (prev ? [`<li style="padding:4px 0">✓ Todo lo del plan ${esc(b.plans.find((x) => x.id === prev)?.name)}</li>`] : [])

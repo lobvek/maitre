@@ -177,7 +177,7 @@ describe('pedidos desde la mesa', () => {
 });
 
 describe('planes', () => {
-  test('el plan Mesa bloquea pedidos y analítica de servicio', async () => {
+  test('el plan Mesa permite pedir pero no tiene analítica', async () => {
     const { data: alta } = await signup(srv.request, { venue_name: 'Basico Test' });
     const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: 'Carta' } });
     const item = await srv.request('/api/menu/items', { method: 'POST', body: { name: 'Agua', price: 2, category_id: cat.data.id } });
@@ -188,13 +188,22 @@ describe('planes', () => {
     assert.equal(analitica.status, 402);
 
     const carta = await srv.request(`/api/public/${alta.venue.slug}/${tables.data.tables[0].token}`, { cookies: false });
-    assert.equal(carta.data.can_order, false);
+    assert.equal(carta.data.can_order, true);
     assert.equal(carta.data.can_call, true);
 
     const pedido = await srv.request(`/api/public/${alta.venue.slug}/${tables.data.tables[0].token}/order`, {
       method: 'POST', cookies: false, body: { lines: [{ item_id: item.data.id, qty: 1 }] },
     });
-    assert.equal(pedido.status, 403);
+    assert.equal(pedido.status, 201);
+
+    // Lo que sí queda para Servicio: mover mesas, encargados con permisos.
+    const t2 = tables.data.tables[1];
+    const mover = await srv.request(`/api/tables/${t2.id}/move`, { method: 'POST', body: { to: tables.data.tables[0].id } });
+    assert.equal(mover.status, 402);
+    const encargado = await srv.request('/api/auth/team', { method: 'POST', body: { email: 'enc@mesa.dev', password: 'contrasena123', role: 'manager' } });
+    assert.equal(encargado.status, 402);
+    const sala = await srv.request('/api/auth/team', { method: 'POST', body: { email: 'sala@mesa.dev', password: 'contrasena123', role: 'staff' } });
+    assert.equal(sala.status, 201);
   });
 
   test('el límite de mesas del plan se respeta', async () => {
@@ -301,7 +310,7 @@ describe('permisos por rol', () => {
 describe('cobro del pedido antes de mandarlo a barra', () => {
   async function localConCobro(modo) {
     const { data: alta } = await signup(srv.request, { venue_name: `Cobro ${modo}` });
-    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'conectado' } });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'local' } });
     await srv.request('/api/venue', { method: 'PATCH', body: { payment_mode: modo } });
     const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: 'Carta' } });
     const item = await srv.request('/api/menu/items', { method: 'POST', body: { name: 'Caña', price: 2.6, category_id: cat.data.id } });
@@ -514,7 +523,7 @@ describe('integración con TPV', () => {
 
   test('solo se admiten URLs http(s) y se genera clave de firma', async () => {
     await signup(srv.request, { venue_name: 'Webhook Test' });
-    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'conectado' } });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'local' } });
     const malo = await srv.request('/api/venue', { method: 'PATCH', body: { webhook_url: 'javascript:alert(1)' } });
     assert.equal(malo.status, 400);
     const bueno = await srv.request('/api/venue', { method: 'PATCH', body: { webhook_url: 'https://tpv.example.com/hook' } });
@@ -533,11 +542,13 @@ describe('arquitectura de precios del estudio', () => {
     const f = await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'founders' } });
     assert.equal(f.status, 400);
     const b = await srv.request('/api/billing');
-    assert.deepEqual(b.data.plans.map((p) => p.id), ['mesa', 'servicio', 'conectado', 'founders']);
+    assert.deepEqual(b.data.plans.map((p) => p.id), ['mesa', 'servicio', 'local', 'founders']);
+    assert.ok(b.data.plans.find((p) => p.id === 'mesa').features.includes('orders'));
+    assert.ok(!b.data.plans.find((p) => p.id === 'mesa').features.includes('analytics'));
     assert.equal(b.data.plans.find((p) => p.id === 'servicio').price_cents, 3900);
   });
 
-  test('el pago con el móvil solo entra con el plan Conectado', async () => {
+  test('el pago con el móvil solo entra con el plan Local', async () => {
     const { data: alta } = await signup(srv.request, { venue_name: 'Pago Plan Test' });
     await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'servicio' } });
     await srv.request('/api/venue', { method: 'PATCH', body: { payment_mode: 'online_required' } });
@@ -580,7 +591,7 @@ describe('fase 1: sugerencias y reseñas', () => {
 
   test('la reseña es posterior al servicio, una por sesión, y el email solo con opt-in', async () => {
     const { data: alta } = await signup(srv.request, { venue_name: 'Reseña Test' });
-    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'conectado' } });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'local' } });
     const t = (await srv.request('/api/tables')).data.tables[0];
     const base = `/api/public/${alta.venue.slug}/${t.token}`;
     const mal = await srv.request(`${base}/review`, { method: 'POST', cookies: false, body: { rating: 9 } });
@@ -624,5 +635,24 @@ describe('cuadro de mando del piloto', () => {
     const f = await srv.request(`/api/admin/venues/${alta.venue.id}`, { method: 'PATCH', body: { plan: 'founders' } });
     assert.equal(f.data.plan, 'founders');
     assert.ok(f.data.plan_until);
+  });
+});
+
+
+describe('carta en varios idiomas', () => {
+  test('el nombre se guarda por idioma y la carta pública lo sirve según ?lang', async () => {
+    const { data: alta } = await signup(srv.request, { venue_name: 'Idiomas Test' });
+    await srv.request('/api/venue', { method: 'PATCH', body: { languages: ['es', 'ca', 'en'] } });
+    const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: { es: 'Bebidas', ca: 'Begudes', en: 'Drinks' } } });
+    await srv.request('/api/menu/items', { method: 'POST', body: {
+      name: { es: 'Caña', ca: 'Canya', en: 'Draft beer' }, description: { es: '25 cl' }, price: 2.6, category_id: cat.data.id,
+    } });
+    const t = (await srv.request('/api/tables')).data.tables[0];
+    const ca = await srv.request(`/api/public/${alta.venue.slug}/${t.token}?lang=ca`, { cookies: false });
+    assert.equal(ca.data.categories[0].name, 'Begudes');
+    assert.equal(ca.data.items[0].name, 'Canya');
+    assert.equal(ca.data.items[0].description, '25 cl', 'sin traducción cae al idioma principal');
+    const en = await srv.request(`/api/public/${alta.venue.slug}/${t.token}?lang=en`, { cookies: false });
+    assert.equal(en.data.items[0].name, 'Draft beer');
   });
 });

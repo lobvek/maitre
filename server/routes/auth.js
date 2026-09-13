@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { get, all, insert, update, run, audit, tx, makeQrCode } from '../db.js';
 import { hashPassword, verifyPassword, createSession, destroySession, requireAuth, requireRole, requireVenue } from '../auth.js';
-import { effectivePlan, trialDaysLeft, PLANS } from '../plans.js';
+import { effectivePlan, trialDaysLeft, PLANS, hasFeature } from '../plans.js';
 import { slugify, token, addDays, bad, ok } from '../utils.js';
 
 export const router = Router();
@@ -121,6 +121,10 @@ router.get('/team', requireAuth, requireVenue, (req, res) => {
 router.post('/team', requireAuth, requireVenue, requireRole('owner'), (req, res) => {
   const { email, name, password, role = 'staff', pin = '' } = req.body || {};
   if (!['manager', 'staff'].includes(role)) return bad(res, 'Rol no válido (manager o staff).');
+  if (role === 'manager' && !hasFeature(req.venue, 'staff')) {
+    return res.status(402).json({ error: 'plan_required', feature: 'staff',
+      message: 'Los encargados con permisos propios están en el plan Servicio. En el plan Mesa el equipo entra con cuentas de sala.' });
+  }
   const mail = String(email || '').trim().toLowerCase();
   if (!mail || String(password || '').length < 8) return bad(res, 'Email y contraseña de al menos 8 caracteres.');
   if (get('SELECT id FROM users WHERE email = ?', mail)) return bad(res, 'Ese email ya está en uso.', 409);
@@ -140,7 +144,12 @@ router.patch('/team/:id', requireAuth, requireVenue, requireRole('owner'), (req,
   }
   const patch = {};
   if (req.body.name !== undefined) patch.name = String(req.body.name);
-  if (req.body.role !== undefined && ['manager', 'staff'].includes(req.body.role)) patch.role = req.body.role;
+  if (req.body.role !== undefined && ['manager', 'staff'].includes(req.body.role)) {
+    if (req.body.role === 'manager' && !hasFeature(req.venue, 'staff')) {
+      return res.status(402).json({ error: 'plan_required', feature: 'staff', message: 'Los encargados están en el plan Servicio.' });
+    }
+    patch.role = req.body.role;
+  }
   if (req.body.active !== undefined) patch.active = req.body.active ? 1 : 0;
   if (req.body.pin !== undefined) patch.pin = String(req.body.pin).slice(0, 6) || null;
   if (req.body.password) {

@@ -5,8 +5,15 @@ Carta digital por QR, pedido desde la mesa y gestión de sala para bares, cafete
 Implementación del producto descrito en el *Plan de empresa 2026* y alineada con el *Estudio de
 competencia y estrategia 2026*: capa de servicio de mesa compatible con cualquier TPV — carta móvil por
 QR administrable en cada mesa, pedido con confirmación y estado, aviso al personal, cola de sala y cocina,
-cuña de madera modular, piloto de 30 días medido y planes Mesa 19 € / Servicio 39 € / Conectado 69 €
+cuña de madera modular, piloto de 30 días medido y planes Mesa 19 € / Servicio 39 € / Local 69 €
 (+ oferta Fundadores).
+
+| Plan | Qué incluye |
+|---|---|
+| **Mesa** 19 € | Carta en varios idiomas, alérgenos, QR por mesa, pedido desde la mesa con variantes y extras, aviso al personal, pantalla de sala sencilla, cuentas de sala |
+| **Servicio** 39 € | + barra y cocina separadas, comanda imprimible, agotados en un toque, sugerencias, cambio y unión de mesas, equipo con roles, analítica y exportaciones |
+| **Local** 69 € | + integración con TPV, pago con el móvil, reseñas y opt-in, varios locales |
+| **Fundadores** | Servicio a 19 € durante 24 meses; lo asigna Maitre |
 
 ---
 

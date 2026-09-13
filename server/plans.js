@@ -1,9 +1,14 @@
-// Planes comerciales y control de funciones.
-// Arquitectura de precios del Estudio competitivo 2026 (tabla 9): Mesa / Servicio / Conectado,
-// más la oferta Fundadores para la primera cohorte. Precios sin IVA, hipótesis para test A/B.
-const MESA = ['menu', 'qr', 'calls', 'analytics_basic', 'staff_basic'];
-const SERVICIO = [...MESA, 'orders', 'kds', 'modifiers', 'upsell', 'staff', 'tables', 'export', 'analytics'];
-const CONECTADO = [...SERVICIO, 'integrations', 'payments', 'reviews', 'multi_venue'];
+// Planes comerciales y control de funciones. Precios sin IVA (hipótesis para test A/B).
+// Reparto acordado el 13-09-2026: el pedido desde la mesa y las variantes van en Mesa;
+// la analítica, el equipo con roles y la sala avanzada van en Servicio.
+// Cambiar un plan = tocar este fichero; el resto de la app lee de aquí.
+
+// Mesa: la carta, el pedido y la llamada. Recibe los pedidos en una pantalla de sala sencilla.
+const MESA = ['menu', 'qr', 'calls', 'orders', 'modifiers', 'staff_basic'];
+// Servicio: la sala completa — barra/cocina, comandas, agotados en un toque, mesas, roles, analítica.
+const SERVICIO = [...MESA, 'kds', 'upsell', 'staff', 'tables', 'export', 'analytics'];
+// Local: todo el local conectado — TPV, pago con el móvil, reseñas y varios locales.
+const LOCAL = [...SERVICIO, 'integrations', 'payments', 'reviews', 'multi_venue'];
 
 export const PLANS = {
   trial: {
@@ -18,7 +23,7 @@ export const PLANS = {
     id: 'mesa',
     name: 'Mesa',
     price_cents: 1900,
-    tagline: 'Carta, idiomas, alérgenos, aviso al personal y analítica básica',
+    tagline: 'Carta, idiomas, alérgenos, pedido desde la mesa con extras y aviso al personal',
     max_tables: 40,
     features: MESA,
   },
@@ -26,18 +31,18 @@ export const PLANS = {
     id: 'servicio',
     name: 'Servicio',
     price_cents: 3900,
-    tagline: 'Pedido desde la mesa, cola de sala, estados, agotados, sugerencias y roles',
+    tagline: 'Barra y cocina, comandas, agotados en un toque, mesas, equipo con roles y analítica',
     max_tables: 80,
     features: SERVICIO,
     highlight: true,
   },
-  conectado: {
-    id: 'conectado',
-    name: 'Conectado',
+  local: {
+    id: 'local',
+    name: 'Local',
     price_cents: 6900,
-    tagline: 'Integraciones con TPV, pago opcional, reseñas y varios locales',
+    tagline: 'Integración con tu TPV, pago con el móvil, reseñas y varios locales',
     max_tables: 200,
-    features: CONECTADO,
+    features: LOCAL,
   },
   founders: {
     id: 'founders',
@@ -60,23 +65,22 @@ export const PLANS = {
 };
 
 /** Planes que un local puede contratar por sí mismo. */
-export const SELF_SERVICE = ['mesa', 'servicio', 'conectado'];
+export const SELF_SERVICE = ['mesa', 'servicio', 'local'];
 
 export const FEATURE_LABELS = {
   menu: 'Carta digital',
   qr: 'QR por mesa',
   calls: 'Aviso al personal',
-  analytics_basic: 'Analítica básica',
-  staff_basic: 'Acceso del personal',
   orders: 'Pedido desde la mesa',
-  kds: 'Cola de sala y cocina',
   modifiers: 'Variantes y extras',
+  staff_basic: 'Acceso del personal a la sala',
+  kds: 'Barra y cocina, comandas y agotados en un toque',
   upsell: 'Sugerencias (upselling)',
-  staff: 'Equipo y roles',
-  tables: 'Gestión de mesas',
+  staff: 'Equipo con roles',
+  tables: 'Cambio y unión de mesas',
   export: 'Exportaciones',
-  analytics: 'Analítica de servicio',
-  integrations: 'Integraciones con TPV',
+  analytics: 'Analítica',
+  integrations: 'Integración con TPV',
   payments: 'Pago con el móvil',
   reviews: 'Reseñas y opt-in',
   multi_venue: 'Varios locales',

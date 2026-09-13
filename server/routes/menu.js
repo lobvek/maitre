@@ -18,8 +18,10 @@ router.get('/categories', (req, res) => {
     .map((c) => ({ ...c, name: parseJson(c.name, {}), description: parseJson(c.description, {}), days: parseJson(c.days, [0, 1, 2, 3, 4, 5, 6]) })));
 });
 
+const hasText = (v) => typeof v === 'string' ? v.trim() !== '' : !!v && Object.values(v).some((x) => String(x).trim());
+
 router.post('/categories', requireRole('manager'), (req, res) => {
-  if (!req.body.name) return bad(res, 'La categoría necesita un nombre.');
+  if (!hasText(req.body.name)) return bad(res, 'La categoría necesita un nombre.');
   const max = get('SELECT COALESCE(MAX(sort), 0) AS m FROM categories WHERE venue_id = ?', req.venue.id).m;
   const id = insert('categories', {
     venue_id: req.venue.id,
@@ -119,7 +121,7 @@ function itemPatch(body, venue) {
 }
 
 router.post('/items', requireRole('manager'), (req, res) => {
-  if (!req.body.name) return bad(res, 'El producto necesita un nombre.');
+  if (!hasText(req.body.name)) return bad(res, 'El producto necesita un nombre.');
   const max = get('SELECT COALESCE(MAX(sort), 0) AS m FROM items WHERE venue_id = ?', req.venue.id).m;
   const id = insert('items', { venue_id: req.venue.id, sort: max + 1, ...itemPatch(req.body, req.venue) });
   audit(req.venue.id, req.user.id, 'menu.item_created', 'item', id);

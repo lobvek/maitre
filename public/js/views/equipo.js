@@ -1,5 +1,6 @@
 // Equipo del local: altas, roles y PIN de sala.
 import { api, esc, el, $, $$, toast, modal, confirmDialog, fmtDate } from '/js/core.js';
+import { hasFeature } from '/js/app.js';
 
 const ROLE = { owner: 'Propietario', manager: 'Encargado', staff: 'Sala' };
 
@@ -35,7 +36,7 @@ async function editUser(user) {
       <div class="field"><label>Nombre</label><input id="name" value="${esc(user?.name || '')}"></div>
       <div class="field"><label>Rol</label><select id="role">
         <option value="staff" ${user?.role === 'staff' ? 'selected' : ''}>Sala</option>
-        <option value="manager" ${user?.role === 'manager' ? 'selected' : ''}>Encargado</option>
+        <option value="manager" ${user?.role === 'manager' ? 'selected' : ''} ${hasFeature('staff') ? '' : 'disabled'}>Encargado${hasFeature('staff') ? '' : ' (plan Servicio)'}</option>
       </select></div>
     </div>
     <div class="field"><label>Email</label><input id="email" type="email" value="${esc(user?.email || '')}" ${user ? 'disabled' : ''}></div>

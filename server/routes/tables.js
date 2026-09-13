@@ -180,7 +180,7 @@ router.get('/print', async (req, res) => {
 });
 
 /** Cambio de mesa: se lleva todo lo abierto a otra mesa (comensales que se mudan). */
-router.post('/:id/move', (req, res) => {
+router.post('/:id/move', requireFeature('tables'), (req, res) => {
   const from = ownTable(req);
   const to = get('SELECT * FROM tables WHERE id = ? AND venue_id = ?', Number(req.body.to), req.venue.id);
   if (!from || !to) return bad(res, 'Mesa no encontrada.', 404);
@@ -198,7 +198,7 @@ router.post('/:id/move', (req, res) => {
 });
 
 /** Unir mesas: la cuenta de las hijas pasa a cobrarse en la principal. */
-router.post('/:id/merge', (req, res) => {
+router.post('/:id/merge', requireFeature('tables'), (req, res) => {
   const child = ownTable(req);
   const parent = get('SELECT * FROM tables WHERE id = ? AND venue_id = ?', Number(req.body.into), req.venue.id);
   if (!child || !parent) return bad(res, 'Mesa no encontrada.', 404);
@@ -215,7 +215,7 @@ router.post('/:id/merge', (req, res) => {
   res.json({ ok: true, table: child.name, into: parent.name });
 });
 
-router.post('/:id/unmerge', (req, res) => {
+router.post('/:id/unmerge', requireFeature('tables'), (req, res) => {
   const t = ownTable(req);
   if (!t) return bad(res, 'Mesa no encontrada.', 404);
   run('UPDATE tables SET merged_into = NULL WHERE id = ? OR merged_into = ?', t.id, t.id);
