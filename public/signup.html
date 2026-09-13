@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Da de alta tu local · Maitre</title>
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; padding: 24px; }
+  .box { width: min(520px, 100%); }
+  .logo { font-family: var(--serif); font-size: 30px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Maitre</div>
+  <p class="center muted" style="margin-bottom:22px">Piloto de 30 días con el plan Servicio completo. Sin tarjeta.</p>
+  <form class="card" id="form">
+    <div class="field"><label for="venue">Nombre del local</label><input id="venue" required autofocus placeholder="Bar L'Àncora"></div>
+    <div class="field-row">
+      <div class="field"><label for="name">Tu nombre</label><input id="name" placeholder="Rosa Puig"></div>
+      <div class="field"><label for="city">Población</label><input id="city" placeholder="Sant Cugat"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" required autocomplete="username"></div>
+      <div class="field"><label for="tables">Nº de mesas</label><input id="tables" type="number" min="1" max="40" value="8"></div>
+    </div>
+    <div class="field"><label for="password">Contraseña</label><input id="password" type="password" minlength="8" required autocomplete="new-password">
+      <div class="help">Mínimo 8 caracteres.</div></div>
+    <div id="err" class="notice err hidden" style="margin-bottom:14px"></div>
+    <button class="btn primary block lg" id="go">Crear mi carta</button>
+    <p class="center muted" style="margin:16px 0 0;font-size:13.5px">¿Ya tienes cuenta? <a href="/entrar">Entrar</a></p>
+  </form>
+  <p class="fse">Al crear la cuenta aceptas el <a href="/privacidad">aviso de privacidad</a>. Maitre recoge los datos mínimos
+  necesarios para prestar el servicio y no almacena datos de tarjetas de pago.</p>
+</div>
+<script type="module">
+import { api, $ } from '/js/core.js';
+$('#form').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = $('#go'); btn.disabled = true; $('#err').classList.add('hidden');
+  try {
+    await api('/api/auth/signup', { method: 'POST', body: {
+      venue_name: $('#venue').value, name: $('#name').value, city: $('#city').value,
+      email: $('#email').value, password: $('#password').value, tables: $('#tables').value,
+    } });
+    location.href = '/panel#/inicio';
+  } catch (err) {
+    $('#err').textContent = err.message; $('#err').classList.remove('hidden'); btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel · Maitre</title>
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body { display: flex; min-height: 100vh; }
+  nav.side {
+    width: 232px; flex: none; background: var(--surface); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+  }
+  .brand { padding: 20px 20px 14px; font-family: var(--serif); font-size: 22px; }
+  .brand small { display: block; font-family: var(--sans); font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .side .links { flex: 1; overflow-y: auto; padding: 6px 10px; }
+  .side a {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm);
+    color: var(--ink-2); text-decoration: none; font-size: 14.5px; font-weight: 500; margin-bottom: 2px;
+  }
+  .side a:hover { background: var(--surface-2); }
+  .side a.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+  .side a .ico { width: 18px; text-align: center; }
+  .side footer { padding: 14px; border-top: 1px solid var(--line); font-size: 13px; }
+  main.app { flex: 1; min-width: 0; }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 14px 26px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; z-index: 20; }
+  .view { padding: 26px; max-width: 1180px; }
+  .burger { display: none; }
+  @media (max-width: 860px) {
+    body { display: block; }
+    nav.side { position: fixed; z-index: 60; transform: translateX(-100%); transition: .2s; box-shadow: var(--shadow-lg); }
+    nav.side.open { transform: none; }
+    .burger { display: inline-flex; }
+    .view { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+<nav class="side" id="side">
+  <div class="brand">Maitre<small id="venue-name">—</small></div>
+  <div class="links" id="links"></div>
+  <footer>
+    <div id="who" class="muted"></div>
+    <div class="row" style="margin-top:8px">
+      <a class="btn sm grow" href="/sala">Sala</a>
+      <button class="btn sm" id="logout">Salir</button>
+    </div>
+  </footer>
+</nav>
+<main class="app">
+  <div class="topbar">
+    <button class="btn sm burger" id="burger">☰</button>
+    <h2 id="title" style="margin:0;font-size:1.15rem">Panel</h2>
+    <span class="grow"></span>
+    <span id="plan-chip"></span>
+  </div>
+  <div class="view" id="view"><div class="spin" style="margin:60px auto"></div></div>
+</main>
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

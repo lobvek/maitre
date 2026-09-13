@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Pago del pedido</title>
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; padding: 20px; }
+  .box { width: min(420px, 100%); }
+  .amount { font-family: var(--serif); font-size: 2.6rem; text-align: center; margin: 6px 0 2px; }
+  .rows { margin: 20px 0; }
+  .rows div { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--line-2); font-size: 14px; }
+  .sandbox { border: 1px dashed var(--amber); background: var(--amber-soft); color: #6b4700; border-radius: var(--radius); padding: 14px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="box" id="app"><div class="spin" style="margin:60px auto"></div></div>
+<script type="module">
+import { api, money, esc, $, toast } from '/js/core.js';
+
+const [, , slug, tableToken, orderId] = location.pathname.split('/');
+const ref = new URLSearchParams(location.search).get('ref') || '';
+const base = `/api/public/${encodeURIComponent(slug)}/${encodeURIComponent(tableToken)}`;
+const back = `/m/${slug}/${tableToken}`;
+const sessionId = localStorage.getItem(`maitre_sess_${slug}_${tableToken}`) || '';
+
+const carta = await api(base);
+if (carta.venue.brand_color) document.documentElement.style.setProperty('--brand', carta.venue.brand_color);
+const pedido = await api(`${base}/order/${orderId}`);
+
+if (pedido.payment_status === 'paid') location.replace(`${back}?pedido=${orderId}`);
+
+$('#app').innerHTML = `
+  <div class="card">
+    <div class="center">
+      <div class="muted" style="font-size:13px">${esc(carta.venue.name)} · mesa ${esc(carta.table?.name || '')}</div>
+      <div class="amount">${money(pedido.total_cents, carta.venue.currency)}</div>
+      <div class="muted" style="font-size:13px">Pedido ${esc(pedido.code)}</div>
+    </div>
+    <div class="rows">
+      ${pedido.items.map((li) => `<div><span>${li.qty} × ${esc(li.name)}</span>
+        <span>${money(li.line_total_cents, carta.venue.currency)}</span></div>`).join('')}
+      <div><span class="muted">IVA incluido</span><span class="muted">${money(pedido.tax_cents, carta.venue.currency)}</span></div>
+    </div>
+
+    ${carta.payment.sandbox ? `<div class="sandbox">
+      <strong>Pasarela de pruebas.</strong> Aquí es donde se abrirá la pasarela real del local
+      (el importe irá directo a su cuenta; Maitre no toca el dinero ni guarda tarjetas).
+      De momento puedes simular el resultado.</div>` : ''}
+
+    <div class="col" style="margin-top:18px">
+      <button class="btn primary lg block" id="ok">Pagar ${money(pedido.total_cents, carta.venue.currency)}</button>
+      ${carta.payment.sandbox ? '<button class="btn block" id="ko">Simular que el pago falla</button>' : ''}
+      <a class="btn ghost block" href="${esc(back)}">Volver a la carta</a>
+    </div>
+    <p class="muted center" style="font-size:12px;margin:14px 0 0">
+      El pedido no llega a la barra hasta que el pago se confirma.</p>
+  </div>`;
+
+async function finish(result) {
+  const btns = document.querySelectorAll('button');
+  btns.forEach((b) => b.disabled = true);
+  try {
+    const r = await api(`${base}/pay`, { method: 'POST', body: {
+      order_id: Number(orderId), session_id: sessionId, reference: ref, result,
+    } });
+    if (r.failed) {
+      toast('El pago no se ha completado. Prueba otra vez o avisa al camarero.', 'err');
+      btns.forEach((b) => b.disabled = false);
+      return;
+    }
+    location.replace(`${back}?pedido=${orderId}`);
+  } catch (err) {
+    toast(err.message, 'err');
+    btns.forEach((b) => b.disabled = false);
+  }
+}
+$('#ok').onclick = () => finish('ok');
+if ($('#ko')) $('#ko').onclick = () => finish('ko');
+</script>
+</body>
+</html>

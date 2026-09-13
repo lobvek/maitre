@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar · Maitre</title>
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; padding: 24px; }
+  .box { width: min(400px, 100%); }
+  .logo { font-family: var(--serif); font-size: 30px; text-align: center; margin-bottom: 6px; }
+  .demo { font-size: 12.5px; line-height: 1.8; }
+  .demo code { background: var(--surface-2); padding: 2px 6px; border-radius: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Maitre</div>
+  <p class="center muted" style="margin-bottom:22px">La mesa, conectada.</p>
+  <form class="card" id="form">
+    <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required autofocus></div>
+    <div class="field"><label for="password">Contraseña</label><input id="password" type="password" autocomplete="current-password" required></div>
+    <div id="err" class="notice err hidden" style="margin-bottom:14px"></div>
+    <button class="btn primary block lg" id="go">Entrar</button>
+    <p class="center muted" style="margin:16px 0 0;font-size:13.5px">¿Aún no tienes cuenta? <a href="/alta">Da de alta tu local</a></p>
+  </form>
+  <div class="card flat" style="margin-top:16px;background:transparent">
+    <strong style="font-size:13px">Cuentas de demostración</strong>
+    <div class="demo muted">
+      <div><code data-u="ancora@maitre.app">ancora@maitre.app</code> — local Fundadores (piloto convertido)</div>
+      <div><code data-u="vitoria@maitre.app">vitoria@maitre.app</code> — local en piloto</div>
+      <div><code data-u="sala.ancora@maitre.app">sala.ancora@maitre.app</code> — camarero</div>
+      <div><code data-u="marc@maitre.app">marc@maitre.app</code> — operador de Maitre</div>
+      <div style="margin-top:6px">Contraseña de todas: <code data-p>maitre2026</code></div>
+    </div>
+  </div>
+</div>
+<script type="module">
+import { api, $, $$ } from '/js/core.js';
+const next = new URLSearchParams(location.search).get('next');
+$$('[data-u]').forEach((c) => c.onclick = () => {
+  $('#email').value = c.dataset.u; $('#password').value = 'maitre2026'; $('#go').focus();
+});
+$('[data-p]').onclick = () => { $('#password').value = 'maitre2026'; };
+$('#form').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = $('#go'); btn.disabled = true; $('#err').classList.add('hidden');
+  try {
+    const r = await api('/api/auth/login', { method: 'POST', body: { email: $('#email').value, password: $('#password').value } });
+    location.href = next || (r.user.role === 'superadmin' ? '/operador' : r.user.role === 'staff' ? '/sala' : '/panel');
+  } catch (err) {
+    $('#err').textContent = err.message; $('#err').classList.remove('hidden'); btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>

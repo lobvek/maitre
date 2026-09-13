@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maitre · Cada mesa, un punto de servicio</title>
+<meta name="description" content="Convierte cada mesa en un punto de servicio bonito, rápido y medible — sin cambiar tu TPV y sin comisión por pedido. Piloto de 30 días en tu local.">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  header.nav { position: sticky; top: 0; z-index: 40; background: rgba(250,247,241,.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  header.nav .wrap { display: flex; align-items: center; gap: 18px; padding-top: 14px; padding-bottom: 14px; }
+  .logo { font-family: var(--serif); font-size: 22px; font-weight: 600; text-decoration: none; color: var(--ink); }
+  header.nav a.link { font-size: 14px; color: var(--ink-2); text-decoration: none; }
+  header.nav a.link:hover { color: var(--brand); }
+
+  .hero { padding: 76px 0 60px; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+  .hero h1 { font-size: 3rem; line-height: 1.06; margin-bottom: 18px; }
+  .hero p.lead { font-size: 1.12rem; color: var(--ink-2); max-width: 46ch; }
+  .eyebrow { display: inline-flex; gap: 8px; align-items: center; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--brand); margin-bottom: 14px; }
+
+  /* Maqueta del móvil sobre la cuña */
+  .mock { position: relative; display: grid; place-items: center; }
+  .phone {
+    width: 250px; border-radius: 30px; background: #1c1a17; padding: 9px; box-shadow: var(--shadow-lg);
+    transform: rotate(-3deg);
+  }
+  .phone .screen { background: #fff; border-radius: 23px; overflow: hidden; height: 470px; }
+  .phone .bar { height: 22px; background: var(--surface-2); }
+  .wedge {
+    position: absolute; right: -6px; bottom: 6px; width: 168px; padding: 14px 12px; border-radius: 8px;
+    background: linear-gradient(160deg, #c9a678, #a97c4b); color: #2a1c0e; text-align: center;
+    box-shadow: var(--shadow-lg); transform: rotate(5deg);
+  }
+  .wedge .n { font-family: var(--serif); font-size: 26px; font-weight: 700; }
+  .wedge .qr { width: 62px; height: 62px; background: #fff; margin: 6px auto 4px; border-radius: 4px; padding: 4px; }
+  .wedge small { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
+
+  section { padding: 60px 0; border-top: 1px solid var(--line); }
+  .section-title { text-align: center; max-width: 640px; margin: 0 auto 40px; }
+  .feat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .feat .ico { font-size: 22px; display: block; margin-bottom: 10px; }
+  .feat h3 { font-size: 1.02rem; margin-bottom: 6px; }
+  .feat p { font-size: 14px; color: var(--ink-2); margin: 0; }
+
+  .price-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 26px; }
+  .price-card.hi { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .price-card .amount { font-family: var(--serif); font-size: 2.6rem; }
+  .price-card ul { list-style: none; padding: 0; margin: 16px 0 22px; font-size: 14.5px; }
+  .quote { font-family: var(--serif); font-size: 1.25rem; line-height: 1.45; border-left: 3px solid var(--brand); padding: 6px 0 6px 20px; color: var(--ink-2); }
+  .icp { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .icp ul { padding-left: 18px; margin: 8px 0 0; font-size: 14.5px; line-height: 1.7; }
+  .pilot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .pilot .card h3 { font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; color: var(--brand); }
+  .pilot ul { padding-left: 18px; margin: 0; font-size: 14px; line-height: 1.7; }
+  @media (max-width: 760px) { .icp, .pilot { grid-template-columns: 1fr; } }
+  .price-card li { padding: 6px 0; border-top: 1px solid var(--line-2); }
+
+  .compare td:first-child { font-weight: 600; }
+  .steps { counter-reset: s; display: grid; gap: 18px; }
+  .step { display: flex; gap: 16px; }
+  .step .n { counter-increment: s; flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 700; font-family: var(--serif); }
+  .step .n::before { content: counter(s); }
+  footer.site { padding: 40px 0; border-top: 1px solid var(--line); background: var(--surface); }
+  @media (max-width: 880px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2.2rem; }
+    .mock { order: -1; }
+  }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a href="/" class="logo">Maitre</a>
+    <span class="grow"></span>
+    <a class="link" href="#producto">Producto</a>
+    <a class="link" href="#piloto">Piloto</a>
+    <a class="link" href="#precios">Precios</a>
+    <a class="link" href="#contacto">Contacto</a>
+    <a class="btn sm" href="/entrar">Entrar</a>
+    <a class="btn sm primary" href="#contacto">Pedir un piloto</a>
+  </div>
+</header>
+
+<div class="wrap hero">
+  <div class="hero-grid">
+    <div>
+      <div class="eyebrow">◆ Capa de servicio de mesa · compatible con tu TPV</div>
+      <h1>Convierte cada mesa en un punto de servicio bonito, rápido y medible.</h1>
+      <p class="lead">Sin cambiar tu TPV y sin comisión por pedido. Maitre mejora lo que pasa entre que el cliente
+      se sienta y el camarero entrega el pedido: carta, pedido, llamada, estado y una cuña de madera en cada mesa.</p>
+      <div class="row wrap-row" style="margin-top:26px">
+        <a class="btn primary lg" href="#contacto">Probar un mes en mi local</a>
+        <a class="btn lg" href="/m/bar-lancora" target="_blank">Ver una carta de verdad</a>
+      </div>
+      <p class="muted" style="font-size:13.5px;margin-top:14px">Funcionando en 72 horas · sobre el sistema que ya usas · sin comisión de Maitre por pedido</p>
+    </div>
+    <div class="mock">
+      <div class="phone"><div class="screen">
+        <div class="bar"></div>
+        <iframe src="/m/bar-lancora" style="width:100%;height:448px;border:0" title="Carta de ejemplo" loading="lazy"></iframe>
+      </div></div>
+      <div class="wedge">
+        <div class="n">7</div>
+        <div class="qr" id="qr"></div>
+        <small>Escanea la carta</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="producto">
+  <div class="wrap">
+    <div class="section-title">
+      <h2>No es otra carta QR. Es la capa que le faltaba a tu sala.</h2>
+      <p class="muted">Una carta QR barata ya la vende cualquiera. Lo que no se compra por 10 € al mes es un flujo
+      de servicio fiable en hora punta, con una pieza en la mesa que aguanta el uso y con datos de lo que pasa de verdad.</p>
+    </div>
+    <div class="grid g3">
+      <div class="feat"><span class="ico">📱</span><h3>Carta que se lee bien</h3>
+        <p>Pensada para el móvil: buscador, alérgenos de los 14 grupos, filtros por dieta, idiomas y foto en los platos que quieras.
+        Sin descargar nada, sin registrarse.</p></div>
+      <div class="feat"><span class="ico">🧾</span><h3>Pedido con confirmación y estado</h3>
+        <p>El cliente elige, añade extras y ve el pedido avanzar: recibido, aceptado, en preparación, servido.
+        Menos ansiedad, menos «¿y lo mío?».</p></div>
+      <div class="feat"><span class="ico">🔔</span><h3>Aviso al personal, con motivo</h3>
+        <p>Camarero, la cuenta o agua, con un toque. Lo activas o lo desactivas tú. Si en tu sala no encaja, el botón no aparece.</p></div>
+      <div class="feat"><span class="ico">🍳</span><h3>Cola de sala que no pierde pedidos</h3>
+        <p>Pantalla para barra y cocina por separado, aviso sonoro, alerta si algo lleva 3 minutos sin aceptar,
+        agotados en un toque y comanda imprimible.</p></div>
+      <div class="feat"><span class="ico">🪵</span><h3>Cuña de madera modular</h3>
+        <p>Tu logo, el número de mesa y el QR grabados a láser; «Reservado» en la base; módulos que se deslizan
+        (servilletero, cubrecenicero, azucarillos, aro de taza). El QR es administrable: si algo cambia, no se regraba madera.</p></div>
+      <div class="feat"><span class="ico">📊</span><h3>Medible desde el primer servicio</h3>
+        <p>Qué mesas escanean, cuántas piden o llaman, cuánto tardáis en aceptar, ticket medio y lo que más se vende.
+        Los datos que necesitas para decidir si seguir.</p></div>
+    </div>
+
+    <div class="card" style="margin-top:40px;max-width:820px;margin-left:auto;margin-right:auto">
+      <div class="quote">«No te voy a cambiar el TPV. Voy a mejorar lo que ocurre entre que el cliente se sienta y el
+      camarero entrega el pedido. Te lo dejo funcionando un mes, medimos esperas, uso y ticket, y si no aporta valor
+      retiramos el material.»</div>
+      <p class="muted" style="font-size:13px;margin:12px 0 0">Así de simple es la propuesta. Y así de simple es salir.</p>
+    </div>
+  </div>
+</section>
+
+<section id="piloto" style="background:var(--surface-2)">
+  <div class="wrap">
+    <div class="section-title"><h2>Un piloto de 30 días, no un regalo</h2>
+      <p class="muted">Lo probamos en tu local con un objetivo pactado y una decisión clara al final. Tú aportas
+      la línea de base; nosotros, la instalación, el material y la atención directa durante los servicios.</p></div>
+    <div class="pilot">
+      <div class="card"><h3>Antes</h3><ul>
+        <li>7 días de línea base: ticket medio y esperas</li>
+        <li>Carta cargada, QR en cada mesa, responsables definidos</li>
+        <li>Objetivo elegido: tiempo, ticket o carga de sala</li>
+        <li>Depósito por las cuñas y fecha de decisión</li></ul></div>
+      <div class="card"><h3>Durante</h3><ul>
+        <li>Observamos dos servicios contigo</li>
+        <li>Revisión semanal de uso e incidencias</li>
+        <li>Soporte directo de los fundadores</li>
+        <li>Registro de cualquier pedido perdido</li></ul></div>
+      <div class="card"><h3>Éxito al día 30</h3><ul>
+        <li>≥ 20 % de las mesas usan pedido o llamada</li>
+        <li>+ 5 % de ticket, o ahorro de tiempo observable</li>
+        <li>0 pedidos perdidos</li>
+        <li>El equipo de sala quiere mantenerlo</li></ul></div>
+    </div>
+    <div class="icp" style="margin-top:34px">
+      <div class="card"><h3>Para quién es</h3><ul>
+        <li>Bares, cafeterías y casual dining independientes, 1–3 locales</li>
+        <li>15–40 mesas, terraza, picos de servicio</li>
+        <li>Carta que cambia y propietario presente</li>
+        <li>Quejas por esperas, errores de comanda o falta de manos</li></ul></div>
+      <div class="card"><h3>Para quién no, todavía</h3><ul>
+        <li>Alta cocina, hoteles, discotecas y cadenas con compras centralizadas</li>
+        <li>Locales sin wifi estable ni alternativa</li>
+        <li>Cocinas sin nadie que acepte pedidos</li>
+        <li>Quien solo quiere un PDF con QR</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="precios">
+  <div class="wrap">
+    <div class="section-title"><h2>Precios claros</h2>
+      <p class="muted">Cuota fija por local. Sin instalación, sin permanencia y sin porcentaje sobre lo que vendes.
+      Si algún día incorporas el pago con el móvil, la tarifa de la pasarela se muestra aparte, nunca escondida en la cuota.</p></div>
+    <div class="grid g3" style="max-width:1000px;margin:0 auto">
+      <div class="price-card">
+        <h3>Mesa</h3>
+        <div class="amount">19 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
+        <ul>
+          <li>Carta móvil, idiomas y alérgenos</li>
+          <li>QR administrable por mesa</li>
+          <li>Aviso al personal con motivo</li>
+          <li>Analítica básica</li>
+          <li>Hasta 40 mesas</li>
+        </ul>
+        <a class="btn block" href="#contacto">Empezar</a>
+      </div>
+      <div class="price-card hi">
+        <div class="spread"><h3 style="margin:0">Servicio</h3><span class="tag brand">Plan principal</span></div>
+        <div class="amount">39 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
+        <ul>
+          <li>Todo lo del plan Mesa</li>
+          <li>Pedido desde la mesa con confirmación y estado</li>
+          <li>Cola de sala y cocina, agotados, comandas</li>
+          <li>Variantes, extras y sugerencias</li>
+          <li>Equipo con roles y gestión de mesas</li>
+        </ul>
+        <a class="btn primary block" href="#contacto">Pedir el piloto</a>
+      </div>
+      <div class="price-card">
+        <h3>Conectado</h3>
+        <div class="amount">69 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
+        <ul>
+          <li>Todo lo del plan Servicio</li>
+          <li>Integración con tu TPV (webhook firmado)</li>
+          <li>Pago con el móvil, opcional</li>
+          <li>Reseñas y opt-in tras el servicio</li>
+          <li>Varios locales</li>
+        </ul>
+        <a class="btn block" href="#contacto">Hablar con nosotros</a>
+      </div>
+    </div>
+    <div class="notice ok" style="max-width:1000px;margin:18px auto 0">
+      <strong>Oferta Fundadores.</strong> Los primeros locales que conviertan su piloto se quedan el plan Servicio a
+      <strong>19 €/mes durante 24 meses</strong>. Es nuestra forma de pagar el riesgo de ir primero.</div>
+
+    <div class="card" style="max-width:1000px;margin:26px auto 0">
+      <h3>Calcula lo que te costaría</h3>
+      <div class="row wrap-row" style="align-items:flex-end">
+        <div style="min-width:150px"><label>Mesas</label><input type="number" id="c-tables" min="1" max="200" value="18"></div>
+        <div style="min-width:220px"><label>Plan</label><select id="c-plan">
+          <option value="mesa">Mesa · carta y avisos</option>
+          <option value="servicio" selected>Servicio · pedido desde la mesa</option>
+          <option value="conectado">Conectado · TPV y pagos</option>
+        </select></div>
+        <div style="min-width:190px"><label>Cuñas de madera</label><select id="c-wedge">
+          <option value="0">No, empiezo con la hoja de QR</option>
+          <option value="1" selected>Sí, una por mesa</option>
+        </select></div>
+      </div>
+      <div id="calc" class="notice ok" style="margin-top:18px"></div>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Las cuñas se cobran a su <strong>coste completo</strong>
+      (material, grabado, merma, montaje, embalaje, envío y garantía) más IVA, revisado cada trimestre; orientativamente
+      entre 9 y 14 € por pieza según lote. Son un pago único, no una cuota. Se fabrican con tu logo y tardan unos días:
+      mientras tanto empiezas con la hoja de QR. Durante el piloto se dejan con depósito.</p>
+    </div>
+
+    <div class="card" style="max-width:1000px;margin:20px auto 0">
+      <h3>Dónde queda frente a lo que hay</h3>
+      <table class="compare"><thead><tr><th></th><th>Cuota</th><th>Instalación</th><th>% por pedido</th><th>¿Cambias de sistema?</th></tr></thead>
+        <tbody>
+          <tr><td>Maitre</td><td>19 – 69 €/mes</td><td>0 €</td><td>0 %</td><td>No, convive con tu TPV</td></tr>
+          <tr><td>MesaCarta</td><td>10 – 15 €/mes</td><td>—</td><td>—</td><td>No (carta QR)</td></tr>
+          <tr><td>Honei</td><td>a medida / por uso</td><td>—</td><td>vinculado al pago</td><td>No, pero pagos integrados</td></tr>
+          <tr><td>Last.app</td><td>50 – 175 €/mes</td><td>500 €</td><td>1,5 % en QR</td><td>Sí, es tu TPV</td></tr>
+          <tr><td>Qamarero</td><td>119 – 249 €/mes</td><td>—</td><td>—</td><td>Sí, todo en uno</td></tr>
+          <tr><td>Cegid Revo</td><td>desde 838 €/año</td><td>según distribuidor</td><td>—</td><td>Sí, TPV iPad</td></tr>
+        </tbody></table>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Tarifas públicas consultadas el 11 de septiembre de 2026, sin IVA
+      salvo indicación. No todos los productos son comparables ni incluyen hardware, implantación o comisiones de pago.
+      Maitre no pretende ser lo más barato del mercado: pretende ser mucho más barato y menos arriesgado que cambiar de
+      sistema, y más fiable que una carta QR de bajo coste.</p>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--surface-2)">
+  <div class="wrap" style="max-width:760px">
+    <h2 class="center">De cero a servir en 72 horas</h2>
+    <div class="steps" style="margin-top:30px">
+      <div class="step"><div class="n"></div><div><strong>Día 1 · Lo montamos contigo</strong>
+        <div class="muted">Vamos al local. Carta cargada (a mano o desde tu CSV), mesas creadas, hoja de QR impresa. Formación al equipo en menos de 45 minutos.</div></div></div>
+      <div class="step"><div class="n"></div><div><strong>Día 2 · Primer servicio acompañado</strong>
+        <div class="muted">Pantalla de sala en una tablet o el ordenador de barra. Observamos, ajustamos avisos y agotados.</div></div></div>
+      <div class="step"><div class="n"></div><div><strong>Día 3 · Ya funciona solo</strong>
+        <div class="muted">Revisión semanal durante el piloto. Las cuñas de madera con tu logo llegan en unos días y sustituyen la hoja provisional.</div></div></div>
+      <div class="step"><div class="n"></div><div><strong>Día 30 · Decidimos con datos</strong>
+        <div class="muted">Uso por mesa, esperas, ticket, incidencias. Contratas, ampliamos por una causa concreta o retiramos el material. Sin dramas.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="contacto">
+  <div class="wrap" style="max-width:620px">
+    <div class="section-title"><h2>¿Lo vemos en tu local?</h2>
+      <p class="muted">Escríbenos. Te lo enseñamos funcionando en tu propia mesa en 15 minutos, y si encaja arrancamos el piloto.</p></div>
+    <form class="card" id="lead">
+      <div class="field-row">
+        <div class="field"><label>Tu nombre</label><input id="l-name" required></div>
+        <div class="field"><label>Local</label><input id="l-venue"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Email</label><input id="l-email" type="email" required></div>
+        <div class="field"><label>Teléfono</label><input id="l-phone"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Población</label><input id="l-city"></div>
+        <div class="field"><label>Nº de mesas</label><input id="l-tables" type="number" min="1"></div>
+      </div>
+      <div class="field"><label>¿Qué te duele hoy en la sala?</label><textarea id="l-msg" rows="3" placeholder="Esperas en terraza, errores de comanda, falta de camareros…"></textarea></div>
+      <button class="btn primary block lg" id="l-go">Pedir un piloto</button>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">Al enviar aceptas el <a href="/privacidad">aviso de privacidad</a>.
+      Usaremos tus datos solo para responderte.</p>
+    </form>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="spread wrap-row">
+      <div><span class="logo">Maitre</span>
+        <div class="muted" style="font-size:13px">Sant Cugat del Vallès · hola@maitre.app</div></div>
+      <div class="row wrap-row">
+        <a class="link" href="/entrar">Entrar</a>
+        <a class="link" href="/alta">Dar de alta un local</a>
+        <a class="link" href="/privacidad">Privacidad</a>
+      </div>
+    </div>
+    <div class="fse">
+      <strong>Actuación cofinanciada por el Fondo Social Europeo Plus (FSE+) y la Generalitat de Catalunya</strong>
+      en el marco del programa de subvenciones para favorecer el autoempleo de jóvenes.
+      <div style="margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <span class="tag">Generalitat de Catalunya</span>
+        <span class="tag">Unió Europea · FSE+</span>
+        <span class="tag">Garantia Juvenil</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script type="module">
+import { api, $, toast, money } from '/js/core.js';
+
+$('#qr').innerHTML = `<img src="/api/public/bar-lancora/qr.png?size=200" onerror="this.style.display='none'" style="width:100%" alt="">`;
+
+const PRICE = { mesa: 1900, servicio: 3900, conectado: 6900 };
+const LIMIT = { mesa: 40, servicio: 80, conectado: 200 };
+const calc = () => {
+  const tables = Math.max(1, Number($('#c-tables').value) || 1);
+  const plan = $('#c-plan').value;
+  const monthly = PRICE[plan];
+  const wedges = $('#c-wedge').value === '1' ? [tables * 900, tables * 1400] : null;
+  $('#calc').innerHTML = `<strong>${money(monthly)} al mes + IVA</strong> — ${money(monthly / tables)} por mesa y mes.
+    ${wedges ? `<br>Cuñas: un único pago orientativo de <strong>${money(wedges[0])} – ${money(wedges[1])}</strong> + IVA por ${tables} piezas, a coste completo.` : ''}
+    ${tables > LIMIT[plan] ? `<br><span class="muted">Con más de ${LIMIT[plan]} mesas te conviene el plan siguiente o un precio a medida.</span>` : ''}`;
+};
+['c-tables', 'c-plan', 'c-wedge'].forEach((id) => $('#' + id).oninput = calc);
+calc();
+
+$('#lead').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = $('#l-go'); btn.disabled = true;
+  try {
+    const r = await api('/api/leads', { method: 'POST', body: {
+      name: $('#l-name').value, venue_name: $('#l-venue').value, email: $('#l-email').value,
+      phone: $('#l-phone').value, city: $('#l-city').value, tables: $('#l-tables').value,
+      plan_interest: $('#c-plan').value, message: $('#l-msg').value,
+    } });
+    $('#lead').innerHTML = `<div class="notice ok">${r.message}</div>`;
+  } catch (err) { toast(err.message, 'err'); btn.disabled = false; }
+};
+</script>
+</body>
+</html>

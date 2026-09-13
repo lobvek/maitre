@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operador · Maitre</title>
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 14px 26px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .wrapper { padding: 26px; max-width: 1240px; margin: 0 auto; }
+  .tabs button { padding: 7px 14px; border-radius: 100px; border: 0; background: transparent; font: 600 13.5px var(--sans); cursor: pointer; color: var(--ink-2); }
+  .tabs button.on { background: var(--ink); color: #fff; }
+  .mile { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); }
+  .bar { height: 8px; border-radius: 8px; background: var(--surface-2); overflow: hidden; flex: 1; }
+  .bar i { display: block; height: 100%; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <strong style="font-family:var(--serif);font-size:20px">Maitre</strong>
+  <span class="tag brand">Operador</span>
+  <div class="tabs grow">
+    <button data-tab="cartera" class="on">Cartera</button>
+    <button data-tab="locales">Locales</button>
+    <button data-tab="pilotos">Pilotos</button>
+    <button data-tab="contactos">Contactos</button>
+    <button data-tab="registro">Registro</button>
+  </div>
+  <button class="btn sm" id="logout">Salir</button>
+</div>
+<div class="wrapper" id="view"><div class="spin" style="margin:60px auto"></div></div>
+<script type="module">
+import { api, money, esc, el, $, $$, toast, fmtDate, num, chart, modal } from '/js/core.js';
+
+let tab = 'cartera';
+$$('.tabs button').forEach((b) => b.onclick = () => {
+  $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  tab = b.dataset.tab; paint();
+});
+$('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/entrar'; };
+
+async function paint() {
+  const view = $('#view');
+  view.innerHTML = '<div class="spin" style="margin:60px auto"></div>';
+  if (tab === 'cartera') return cartera(view);
+  if (tab === 'locales') return locales(view);
+  if (tab === 'pilotos') return pilotos(view);
+  if (tab === 'contactos') return contactos(view);
+  return registro(view);
+}
+
+async function cartera(view) {
+  const d = await api('/api/admin/overview');
+  const k = d.kpis;
+  const signups = d.signups_by_month.map((r) => ({ label: r.month, short: r.month.slice(5), value: r.n }));
+  view.innerHTML = `
+    <div class="grid g4" style="margin-bottom:22px">
+      <div class="kpi"><div class="k">MRR</div><div class="v">${money(k.mrr_cents)}</div><div class="d">ARR ${money(k.arr_cents)}</div></div>
+      <div class="kpi"><div class="k">Locales de pago</div><div class="v">${k.paying}</div><div class="d">${k.trials} en prueba · ${k.pilots} pilotos</div></div>
+      <div class="kpi"><div class="k">Ingreso medio</div><div class="v">${money(k.arpa_cents)}</div><div class="d">por local y mes</div></div>
+      <div class="kpi"><div class="k">Actividad 30 días</div><div class="v">${num(k.orders_30d)}</div><div class="d">pedidos · ${money(k.gmv_30d_cents)} servidos</div></div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Hitos del plan de empresa</h3>
+        <p class="muted" style="font-size:13.5px">Objetivos comprometidos en el plan frente a la cartera real.</p>
+        ${d.milestones.map((m) => `<div class="mile">
+          <span style="width:74px" class="muted">Mes ${m.month}</span>
+          <div class="bar"><i style="width:${Math.min(100, Math.round(k.paying / m.target * 100))}%"></i></div>
+          <strong style="width:70px" class="right">${k.paying}/${m.target}</strong>
+          ${m.reached ? '<span class="tag green">✓</span>' : ''}
+        </div><div class="muted" style="font-size:12px;margin-left:74px">${esc(m.label)}</div>`).join('')}
+        <div class="mile" style="margin-top:10px">
+          <span style="width:74px" class="muted">Equilibrio</span>
+          <div class="bar"><i style="width:${k.breakeven_pct}%;background:var(--brand)"></i></div>
+          <strong style="width:70px" class="right">${k.paying}/${k.breakeven_venues}</strong>
+        </div>
+        <div class="muted" style="font-size:12px;margin-left:74px">Punto de equilibrio operativo estimado</div>
+      </div>
+      <div class="card"><h3>Altas por mes</h3>
+        ${signups.length ? chart(signups, { kind: 'bar', height: 200, color: 'var(--brand)' }) : '<div class="empty">Sin datos.</div>'}</div>
+    </div>`;
+}
+
+async function locales(view) {
+  const rows = await api('/api/admin/venues');
+  view.innerHTML = `
+    <div class="row" style="margin-bottom:14px"><input id="q" placeholder="Buscar local…" style="max-width:320px"></div>
+    <div class="card" style="padding:0"><table>
+      <thead><tr><th>Local</th><th>Plan</th><th>Mesas</th><th>Carta</th><th>Pedidos 7d</th><th>Último pedido</th><th>MRR</th><th></th></tr></thead>
+      <tbody>${rows.map((v) => `<tr>
+        <td><strong>${esc(v.name)}</strong>${v.is_pilot ? ' <span class="tag amber">piloto</span>' : ''}
+          <div class="muted" style="font-size:12.5px">${esc(v.city || '')} · ${esc(v.owner_email || '')}</div></td>
+        <td><span class="tag ${['servicio', 'conectado'].includes(v.effective_plan) ? 'green' : v.effective_plan === 'founders' ? 'brand' : v.effective_plan === 'trial' ? 'amber' : ''}">${esc(v.effective_plan)}</span>
+          ${v.status !== 'active' ? `<span class="tag red">${esc(v.status)}</span>` : ''}</td>
+        <td class="num">${v.tables}</td><td class="num">${v.items}</td><td class="num">${v.orders_7d}</td>
+        <td class="muted">${v.last_order_at ? fmtDate(v.last_order_at) : '—'}</td>
+        <td class="num">${money(v.mrr_cents)}</td>
+        <td class="right"><button class="btn sm" data-v="${v.id}">Gestionar</button></td>
+      </tr>`).join('')}</tbody></table></div>`;
+
+  $('#q').oninput = (e) => {
+    const q = e.target.value.toLowerCase();
+    $$('#view tbody tr').forEach((tr) => tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none');
+  };
+  $$('[data-v]').forEach((b) => b.onclick = async () => {
+    const v = rows.find((x) => x.id === Number(b.dataset.v));
+    const body = el('div', { html: `
+      <div class="field"><label>Plan</label><select id="plan">
+        ${[['trial', 'Piloto (30 días)'], ['mesa', 'Mesa · 19 €'], ['servicio', 'Servicio · 39 €'], ['conectado', 'Conectado · 69 €'],
+           ['founders', 'Fundadores · 19 € durante 24 meses'], ['paused', 'En pausa']]
+          .map(([p, n]) => `<option value="${p}" ${v.plan === p ? 'selected' : ''}>${n}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Estado</label><select id="status">
+        ${['active', 'suspended', 'churned'].map((s) => `<option value="${s}" ${v.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select></div>
+      <label class="row"><input type="checkbox" id="pilot" ${v.is_pilot ? 'checked' : ''}> <span>Marcar como local piloto</span></label>
+      <div class="field" style="margin-top:14px"><label>Ampliar prueba (días)</label><input id="ext" type="number" min="0" max="120" placeholder="0"></div>
+      <div class="fse">Carta pública: <a href="/m/${esc(v.slug)}" target="_blank">/m/${esc(v.slug)}</a> · alta ${fmtDate(v.created_at)}</div>` });
+    const saved = await modal({ title: v.name, body, onSave: (r) => api(`/api/admin/venues/${v.id}`, { method: 'PATCH', body: {
+      plan: r.querySelector('#plan').value, status: r.querySelector('#status').value,
+      is_pilot: r.querySelector('#pilot').checked,
+      extend_trial_days: Number(r.querySelector('#ext').value) || undefined,
+    } }) });
+    if (saved) { toast('Local actualizado', 'ok'); paint(); }
+  });
+}
+
+/** Pilotos como experimento: objetivo, línea base, revisión semanal y decisión al día 30. */
+async function pilotos(view) {
+  const rows = (await api('/api/admin/venues')).filter((v) => v.is_pilot || v.plan === 'trial');
+  if (!rows.length) { view.innerHTML = '<div class="empty"><span class="ico">🧪</span>Ningún local marcado como piloto.</div>'; return; }
+  const reports = await Promise.all(rows.map((v) => api(`/api/admin/venues/${v.id}/pilot`)));
+  const OBJ = { tiempo: 'Reducir esperas', ticket: 'Subir el ticket medio', carga: 'Aliviar la carga de sala' };
+
+  view.innerHTML = `<div class="notice info" style="margin-bottom:18px">Regla del estudio: el piloto acaba el día 30 con una decisión
+    explícita — contratar, ampliar por una causa concreta o retirar el material. Éxito: ≥20 % de mesas usan pedido o llamada,
+    +5 % de ticket sobre la línea base y 0 pedidos perdidos.</div>
+    <div class="grid g2">${rows.map((v, i) => {
+      const r = reports[i];
+      return `<div class="card">
+        <div class="spread"><h3 style="margin:0">${esc(v.name)}</h3>
+          <span class="tag ${r.passed >= 3 ? 'green' : r.passed >= 2 ? 'amber' : 'red'}">${r.passed}/${r.checks.length} criterios</span></div>
+        <div class="muted" style="font-size:13px;margin:4px 0 12px">
+          ${r.pilot.objective ? `Objetivo: <strong>${esc(OBJ[r.pilot.objective] || r.pilot.objective)}</strong> · ` : ''}
+          ${r.pilot.start} → ${r.pilot.decision_date} · ${r.pilot.days_left ? `${r.pilot.days_left} días para decidir` : 'fecha de decisión pasada'}
+          ${r.pilot.deposit_cents ? ` · depósito ${money(r.pilot.deposit_cents)}` : ''}</div>
+        ${r.checks.map((c) => `<div class="spread" style="padding:6px 0;border-top:1px solid var(--line-2);font-size:13.5px">
+          <span>${c.ok ? '✅' : '⬜️'} ${esc(c.label)}</span><strong>${esc(c.value)}</strong></div>`).join('')}
+        <div class="grid g3" style="margin-top:14px;gap:10px">
+          <div class="kpi" style="padding:10px 12px"><div class="k">Mesas que escanean</div><div class="v" style="font-size:1.3rem">${r.usage.scan_pct}%</div></div>
+          <div class="kpi" style="padding:10px 12px"><div class="k">Aceptar pedido</div><div class="v" style="font-size:1.3rem">${r.value.accept_minutes ?? '—'} min</div></div>
+          <div class="kpi" style="padding:10px 12px"><div class="k">Valoración</div><div class="v" style="font-size:1.3rem">${r.value.rating ?? '—'}</div>
+            <div class="d">${r.value.reviews} reseñas · ${r.value.optins} opt-in</div></div>
+        </div>
+        <div class="muted" style="font-size:12.5px;margin-top:10px">Ticket ${money(r.value.ticket_cents)}${r.value.baseline_ticket_cents ? ` vs base ${money(r.value.baseline_ticket_cents)}` : ''}
+          · ${r.usage.qr_orders} pedidos QR · ${r.quality.lost_orders} perdidos · ${r.quality.duplicated_orders} duplicados
+          · semana 1: ${r.usage.week1_qr_orders} / semana 4: ${r.usage.week4_qr_orders}</div>
+        ${r.pilot.weekly.length ? `<div style="margin-top:12px;font-size:13px">${r.pilot.weekly.map((w) => `<div><strong>Semana ${w.week}:</strong> ${esc(w.note)}</div>`).join('')}</div>` : ''}
+        <div class="row" style="margin-top:14px"><button class="btn sm" data-edit="${v.id}">Editar piloto</button>
+          <button class="btn sm" data-week="${v.id}">+ Nota semanal</button></div>
+      </div>`;
+    }).join('')}</div>`;
+
+  $$('[data-edit]').forEach((b) => b.onclick = async () => {
+    const v = rows.find((x) => x.id === Number(b.dataset.edit));
+    const r = reports[rows.indexOf(v)].pilot;
+    const body = el('div', { html: `
+      <div class="field"><label>Objetivo elegido con el local</label><select id="obj">
+        ${Object.entries(OBJ).map(([k, n]) => `<option value="${k}" ${r.objective === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="field-row">
+        <div class="field"><label>Inicio</label><input id="start" type="date" value="${esc(r.start)}"></div>
+        <div class="field"><label>Fecha de decisión</label><input id="end" type="date" value="${esc(r.decision_date)}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Ticket medio de base (€)</label><input id="bt" type="number" step="0.1" value="${(r.baseline_ticket_cents / 100) || ''}"></div>
+        <div class="field"><label>Espera media de base (min)</label><input id="bw" type="number" value="${r.baseline_wait_minutes ?? ''}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Depósito de las cuñas (€)</label><input id="dep" type="number" step="1" value="${(r.deposit_cents / 100) || ''}"></div>
+        <div class="field"><label>Responsable en el local</label><input id="resp" value="${esc(r.responsible)}"></div>
+      </div>
+      <div class="field"><label>Notas</label><textarea id="notes" rows="3">${esc(r.notes)}</textarea></div>
+      <div class="help">7 días de línea base antes de empezar; revisión semanal durante; decisión explícita al día 30.</div>` });
+    const saved = await modal({ title: `Piloto · ${v.name}`, body, onSave: (root) => api(`/api/admin/venues/${v.id}`, { method: 'PATCH', body: { pilot: {
+      objective: root.querySelector('#obj').value, start: root.querySelector('#start').value, decision_date: root.querySelector('#end').value,
+      baseline_ticket_cents: Math.round(Number(root.querySelector('#bt').value) * 100) || 0,
+      baseline_wait_minutes: Number(root.querySelector('#bw').value) || null,
+      deposit_cents: Math.round(Number(root.querySelector('#dep').value) * 100) || 0,
+      responsible: root.querySelector('#resp').value, notes: root.querySelector('#notes').value,
+    } } }) });
+    if (saved) { toast('Piloto actualizado', 'ok'); paint(); }
+  });
+  $$('[data-week]').forEach((b) => b.onclick = async () => {
+    const v = rows.find((x) => x.id === Number(b.dataset.week));
+    const r = reports[rows.indexOf(v)].pilot;
+    const note = prompt(`Nota de la semana ${r.weekly.length + 1} en ${v.name}:`);
+    if (!note) return;
+    await api(`/api/admin/venues/${v.id}`, { method: 'PATCH', body: { pilot: { weekly: [...r.weekly, { week: r.weekly.length + 1, note, at: new Date().toISOString().slice(0, 10) }] } } });
+    toast('Nota guardada', 'ok'); paint();
+  });
+}
+
+async function contactos(view) {
+  const leads = await api('/api/admin/leads');
+  view.innerHTML = `<div class="card" style="padding:0"><table>
+    <thead><tr><th>Contacto</th><th>Local</th><th>Población</th><th>Mesas</th><th>Interés</th><th>Estado</th><th>Fecha</th></tr></thead>
+    <tbody>${leads.map((l) => `<tr>
+      <td><strong>${esc(l.name)}</strong><div class="muted" style="font-size:12.5px">${esc(l.email)} ${esc(l.phone || '')}</div></td>
+      <td>${esc(l.venue_name || '—')}</td><td>${esc(l.city || '—')}</td><td class="num">${l.tables || '—'}</td>
+      <td>${esc(l.plan_interest || '—')}</td>
+      <td><select data-lead="${l.id}" style="width:auto;padding:4px 8px;font-size:13px">
+        ${['new', 'contacted', 'pilot', 'won', 'lost'].map((s) => `<option value="${s}" ${l.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select></td>
+      <td class="muted">${fmtDate(l.created_at)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Sin contactos todavía.</td></tr>'}
+    </tbody></table></div>`;
+  $$('[data-lead]').forEach((s) => s.onchange = async () => {
+    await api(`/api/admin/leads/${s.dataset.lead}`, { method: 'PATCH', body: { status: s.value } });
+    toast('Actualizado', 'ok');
+  });
+}
+
+async function registro(view) {
+  const rows = await api('/api/admin/audit');
+  view.innerHTML = `<div class="card" style="padding:0"><table>
+    <thead><tr><th>Cuándo</th><th>Local</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+    <tbody>${rows.map((r) => `<tr><td class="muted">${fmtDate(r.created_at)}</td>
+      <td>${esc(r.venue_name || '—')}</td><td class="muted">${esc(r.user_email || '—')}</td>
+      <td class="mono">${esc(r.action)}</td><td class="muted mono">${esc((r.meta || '').slice(0, 80))}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+try { const me = await api('/api/auth/me'); if (me.user.role !== 'superadmin') location.href = '/panel'; }
+catch { location.href = '/entrar?next=/operador'; }
+paint();
+</script>
+</body>
+</html>

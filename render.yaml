@@ -1,0 +1,23 @@
+# Render Blueprint. En render.com: New → Blueprint → conectar este repo. Plan Free.
+# Ojo: el plan Free no tiene disco persistente: al reiniciarse vuelve a los datos de demostración.
+services:
+  - type: web
+    name: maitre
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SEED_ON_EMPTY
+        value: "1"
+      - key: MAITRE_DATA_DIR
+        value: /opt/render/project/data
+      - key: PUBLIC_URL
+        fromService:
+          type: web
+          name: maitre
+          envVarKey: RENDER_EXTERNAL_URL
