@@ -176,13 +176,48 @@ export function expirePendingPayments(minutes = 30) {
   return Number(res.changes);
 }
 
+/**
+ * «Lo cojo yo»: mientras el pedido se pasa al TPV, queda marcado con el nombre de quien
+ * lo está haciendo para que no lo metan dos camareros a la vez (y salga por duplicado).
+ * La marca se suelta sola a los 5 minutos por si alguien se despista.
+ */
+export function claimOrder(venue, orderId, user, release = false) {
+  const order = get('SELECT * FROM orders WHERE id = ? AND venue_id = ?', Number(orderId), venue.id);
+  if (!order) return { error: 'Pedido no encontrado.', code: 404 };
+  if (!OPEN_STATUSES.includes(order.status)) return { error: 'El pedido ya está cerrado.', code: 409 };
+
+  if (release) {
+    if (order.claimed_by && order.claimed_by !== user.id && !['owner', 'manager', 'superadmin'].includes(user.role)) {
+      return { error: `Lo tiene ${order.claimed_name}. Solo un responsable puede soltarlo.`, code: 403 };
+    }
+    update('orders', order.id, { claimed_by: null, claimed_name: '', claimed_at: null });
+  } else {
+    if (order.claimed_by && order.claimed_by !== user.id) {
+      return { error: `${order.claimed_name} ya lo está metiendo.`, code: 409, taken_by: order.claimed_name };
+    }
+    update('orders', order.id, { claimed_by: user.id, claimed_name: user.name || user.email, claimed_at: nowSql() });
+  }
+  const fresh = hydrateOrder(get('SELECT * FROM orders WHERE id = ?', order.id));
+  publish(venueChannel(venue.id), 'order.updated', fresh);
+  return { order: fresh };
+}
+
+/** Suelta las marcas olvidadas para que ningún pedido quede bloqueado. */
+export function releaseStaleClaims(minutes = 5) {
+  const res = run(
+    `UPDATE orders SET claimed_by = NULL, claimed_name = '', claimed_at = NULL
+     WHERE claimed_at IS NOT NULL AND claimed_at < datetime('now', ?)`, `-${Math.max(1, minutes)} minutes`);
+  return Number(res.changes);
+}
+
 export function setOrderStatus(venue, orderId, status, { userId = null, paymentMethod = null, reason = '' } = {}) {
   const order = get('SELECT * FROM orders WHERE id = ? AND venue_id = ?', Number(orderId), venue.id);
   if (!order) return { error: 'Pedido no encontrado.', code: 404 };
   if (!STATUSES.includes(status)) return { error: 'Estado no válido.' };
   if (order.status === 'paid' && status !== 'paid') return { error: 'Un pedido cobrado ya no se puede modificar.', code: 409 };
 
-  const patch = { status };
+  // Al avanzar de estado la marca deja de tener sentido: ya está metido.
+  const patch = { status, claimed_by: null, claimed_name: '', claimed_at: null };
   const now = nowSql();
   if (status === 'accepted' && !order.accepted_at) patch.accepted_at = now;
   if (status === 'served') patch.served_at = now;

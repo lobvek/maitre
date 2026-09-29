@@ -37,6 +37,37 @@ export function fmtDate(iso, opts = { day: '2-digit', month: 'short', hour: '2-d
   return new Date(iso.replace(' ', 'T')).toLocaleString('es-ES', opts);
 }
 
+/** Icono del juego propio de Maitre. Nunca un emoji en la interfaz. */
+export const icon = (name, cls = '') => `<svg class="i ${cls}" aria-hidden="true"><use href="/assets/icons.svg#i-${name}"/></svg>`;
+
+/**
+ * Pantalla de carga: la cafetera llenando la barra. Aparece con un retardo de
+ * 350 ms (en el CSS) para que las esperas cortas no parpadeen.
+ */
+export function loader(msg = 'Poniendo la cafetera…') {
+  return `<div class="loader">
+    <svg viewBox="0 0 168 142" role="img" aria-label="Cargando">
+      <g class="moka-steam" stroke="var(--ink-3)" stroke-width="2.4" stroke-linecap="round" fill="none">
+        <path d="M30 16c2.5-3 2.5-6 0-9"/><path d="M40 12c2.5-3 2.5-6 0-9"/>
+      </g>
+      <g class="moka-pot" fill="none" stroke="var(--g-900)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M30 32c-12 4-17 8-17 14s5 10 17 15"/>
+        <path d="M70 26l12 6-12 6z" fill="var(--g-900)"/>
+        <path d="M35 92h30l5-32H30z" fill="#CFCAC0"/>
+        <path d="M30 56h42" stroke-width="4"/>
+        <path d="M36 22h28l6 34H30z" fill="#EFEDE6"/>
+        <path d="M41 22l1-7h16l1 7z" fill="var(--g-900)"/>
+        <circle cx="50" cy="11" r="4.5" fill="var(--g-900)"/>
+      </g>
+      <path class="moka-stream" d="M91 52c-2 9 2 15 0 22v34" stroke="var(--coffee)" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <rect x="36" y="112" width="112" height="15" rx="7.5" fill="var(--surface)" stroke="var(--line)" stroke-width="1.8"/>
+      <clipPath id="moka-clip"><rect x="36" y="112" width="112" height="15" rx="7.5"/></clipPath>
+      <rect class="moka-fill" x="36" y="112" height="15" width="0" fill="var(--coffee)" clip-path="url(#moka-clip)"/>
+    </svg>
+    <div class="msg">${esc(msg)}</div>
+  </div>`;
+}
+
 /** Escapa texto para interpolarlo en HTML. */
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -81,7 +112,7 @@ export function modal({ title, body, save = 'Guardar', cancel = 'Cancelar', onSa
     } }, save);
     const box = el('div', { class: 'modal', style: wide ? 'width:min(880px,100%)' : '' },
       el('header', {}, el('h3', { style: 'margin:0' }, title),
-        el('button', { class: 'btn ghost sm', onclick: () => close(null), 'aria-label': 'Cerrar' }, '✕')),
+        el('button', { class: 'btn ghost sm', onclick: () => close(null), 'aria-label': 'Cerrar' }, '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg>')),
       el('div', { class: 'body' }, content),
       el('footer', {}, el('button', { class: 'btn', onclick: () => close(null) }, cancel), saveBtn));
     const bg = el('div', { class: 'modal-bg', onclick: (e) => { if (e.target === bg) close(null); } }, box);
@@ -95,24 +126,47 @@ export function confirmDialog(title, text, save = 'Sí, continuar') {
   return modal({ title, body: el('p', {}, text), save, onSave: () => true });
 }
 
-/** Conexión SSE con reintento automático. */
+/**
+ * Conexión SSE con reintento. Si falla varias veces seguidas comprueba si es que
+ * la sesión ha caducado (una tablet que lleva toda la noche abierta) y, en ese
+ * caso, manda a la pantalla de entrar en vez de reintentar para siempre.
+ */
 export function stream(url, handlers = {}) {
-  let source;
-  let closed = false;
+  let source, closed = false, fallos = 0;
   const connect = () => {
     source = new EventSource(url);
+    source.onopen = () => { fallos = 0; handlers.onopen?.(); };
     for (const [event, fn] of Object.entries(handlers)) {
-      if (event === 'onopen') { source.onopen = fn; continue; }
+      if (event === 'onopen' || event === 'onDead') continue;
       source.addEventListener(event, (e) => { try { fn(JSON.parse(e.data)); } catch { fn(e.data); } });
     }
-    source.onerror = () => { if (!closed) { source.close(); setTimeout(connect, 2500); } };
+    source.onerror = async () => {
+      if (closed) return;
+      source.close();
+      fallos++;
+      if (fallos >= 3) {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+          if (res.status === 401) { closed = true; return void (handlers.onDead?.() ?? (location.href = '/entrar?next=' + location.pathname)); }
+        } catch { /* sin red: seguimos intentando */ }
+      }
+      // Se espera cada vez un poco más, hasta 30 s, para no machacar el servidor.
+      setTimeout(connect, Math.min(2000 * fallos, 30000));
+    };
   };
   connect();
   return { close: () => { closed = true; source?.close(); } };
 }
 
 /** Gráfico de líneas/barras en SVG, sin librerías. */
-export function chart(series, { width = 640, height = 180, kind = 'line', color = 'var(--brand)', format = (v) => v } = {}) {
+export const SERIES = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)'];
+
+/**
+ * Gráfico en SVG, sin librerías. Cuando hay que comparar barras entre sí se usan
+ * colores distintos en tono y en claridad, para que se diferencien de un vistazo
+ * (y también impresos en blanco y negro).
+ */
+export function chart(series, { width = 640, height = 180, kind = 'line', color = 'var(--c1)', format = (v) => v, multicolor = false } = {}) {
   const pad = { l: 44, r: 12, t: 12, b: 24 };
   const w = width - pad.l - pad.r, h = height - pad.t - pad.b;
   const max = Math.max(1, ...series.map((s) => s.value));
@@ -128,12 +182,17 @@ export function chart(series, { width = 640, height = 180, kind = 'line', color 
     const bw = Math.min(56, Math.max(2, (w / n) * 0.62));
     marks = series.map((s, i) => {
       const bx = pad.l + (w / n) * i + (w / n - bw) / 2;
-      return `<rect x="${bx}" y="${y(s.value)}" width="${bw}" height="${Math.max(1, pad.t + h - y(s.value))}" rx="3" fill="${color}" opacity=".85"><title>${s.label}: ${format(s.value)}</title></rect>`;
+      const fill = multicolor ? SERIES[i % SERIES.length] : color;
+      return `<rect x="${bx}" y="${y(s.value)}" width="${bw}" height="${Math.max(1, pad.t + h - y(s.value))}" rx="4" fill="${fill}">
+        <animate attributeName="height" from="0" to="${Math.max(1, pad.t + h - y(s.value))}" dur=".5s" fill="freeze" begin="${i * 0.03}s"/>
+        <animate attributeName="y" from="${pad.t + h}" to="${y(s.value)}" dur=".5s" fill="freeze" begin="${i * 0.03}s"/>
+        <title>${s.label}: ${format(s.value)}</title></rect>`;
     }).join('');
   } else {
     const path = series.map((s, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(s.value).toFixed(1)}`).join(' ');
+    color = color === 'var(--brand)' ? 'var(--c1)' : color;
     const area = `${path} L${x(n - 1)},${pad.t + h} L${pad.l},${pad.t + h} Z`;
-    marks = `<path d="${area}" fill="${color}" opacity=".10"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>` +
+    marks = `<path d="${area}" fill="${color}" opacity=".10"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>` +
       series.map((s, i) => `<circle cx="${x(i)}" cy="${y(s.value)}" r="2.5" fill="${color}"><title>${s.label}: ${format(s.value)}</title></circle>`).join('');
   }
   const labels = series.map((s, i) => (n <= 12 || i % Math.ceil(n / 8) === 0)

@@ -1,5 +1,6 @@
 // Pantalla de sala: pedidos en vivo, avisos del comensal y estado de mesas.
-import { api, money, esc, el, $, $$, toast, stream, modal, confirmDialog } from '/js/core.js';
+import { api, money, esc, el, $, $$, toast, stream, modal, confirmDialog, icon, loader } from '/js/core.js';
+import { flip, haptic, ocupado, transicion } from '/js/motion.js';
 
 const state = {
   me: null, orders: [], calls: [], tables: [], zones: [], tab: 'tickets',
@@ -80,6 +81,7 @@ async function refresh() {
 function connect() {
   stream('/api/orders/stream', {
     onopen: () => { $('#dot').classList.remove('off'); $('#livetxt').textContent = 'en directo'; },
+    onDead: () => { $('#dot').classList.add('off'); $('#livetxt').textContent = 'sesión caducada'; location.href = '/entrar?next=/sala'; },
     'order.created': (o) => { upsert(o); beep(2); toast(`Pedido nuevo · mesa ${o.table_name}`, 'ok'); paint(); },
     'order.updated': (o) => { upsert(o); paint(); },
     'call.created': (c) => { state.calls.unshift(c); beep(); toast(`Aviso de la mesa ${c.table_name || ''}`, 'ok'); paint(); },
@@ -107,10 +109,18 @@ function linesFor(order) {
 }
 const belongsHere = (order) => !state.station || linesFor(order).length > 0;
 
+/** Repinta moviendo los tickets de columna con animación (FLIP), no de un salto. */
 function paint() {
+  const tickets = [...document.querySelectorAll('.ticket[data-flip-id]')];
+  if (tickets.length) return flip(tickets, pintarTodo);
+  pintarTodo();
+}
+
+function pintarTodo() {
   // Avisos
   $('#calls').innerHTML = state.calls.map((c) => {
-    const label = { waiter: '🙋 Camarero', bill: '🧾 La cuenta', water: '💧 Agua', help: '❓ Duda' }[c.type] || c.type;
+    const label = { waiter: icon('hand') + ' Camarero', bill: icon('receipt') + ' La cuenta',
+      water: icon('drop') + ' Agua', help: icon('help') + ' Duda' }[c.type] || c.type;
     return `<div class="call"><strong>Mesa ${esc(c.table_name || '—')}</strong> ${label}
       <span class="muted">${mins(c.created_at)} min</span>
       <button class="btn sm green" data-call="${c.id}">Hecho</button></div>`;
@@ -128,15 +138,17 @@ function paint() {
       <div class="list">${list.map((o) => ticket(o, col)).join('') || '<div class="muted" style="font-size:13px;padding:6px">—</div>'}</div></div>`;
   }).join('');
 
-  $$('[data-adv]').forEach((b) => b.onclick = () => advance(Number(b.dataset.adv)));
+  $$('[data-adv]').forEach((b) => b.onclick = () => ocupado(b, () => advance(Number(b.dataset.adv))));
   $$('[data-print]').forEach((b) => b.onclick = () => printTicket(state.orders.find((o) => o.id === Number(b.dataset.print))));
+  $$('[data-claim]').forEach((b) => b.onclick = () => claim(Number(b.dataset.claim), false));
+  $$('[data-release]').forEach((b) => b.onclick = () => claim(Number(b.dataset.release), true));
   $$('[data-cancel]').forEach((b) => b.onclick = () => cancelOrder(Number(b.dataset.cancel)));
 
   // Mesas
   $('#mesas').innerHTML = state.zones.map((z) => {
     const list = state.tables.filter((t) => t.zone_id === z.id);
     if (!list.length) return '';
-    return `<h3 style="margin:18px 0 10px">${esc(z.name)}</h3><div class="mesas">${list.map(mesa).join('')}</div>`;
+    return `<h3 style="margin:18px 0 10px">${esc(z.name)}</h3><div class="mesas stagger">${list.map(mesa).join('')}</div>`;
   }).join('') + (() => {
     const loose = state.tables.filter((t) => !t.zone_id);
     return loose.length ? `<h3 style="margin:18px 0 10px">Sin zona</h3><div class="mesas">${loose.map(mesa).join('')}</div>` : '';
@@ -147,20 +159,27 @@ function paint() {
 function ticket(o, col) {
   const age = mins(o.created_at);
   const cls = age > 15 ? 'bad' : age > 8 ? 'warn' : '';
-  return `<div class="ticket ${age < 1 && o.status === 'new' ? 'new' : ''} ${age > 20 ? 'late' : ''}">
+  const mio = o.claimed_by && o.claimed_by === state.me.user.id;
+  const deOtro = o.claimed_by && !mio;
+  return `<div class="ticket ${age < 1 && o.status === 'new' ? 'new' : ''} ${age > 20 ? 'late' : ''} ${mio ? 'mine' : ''}" data-flip-id="o${o.id}">
     <header><span class="mesa">Mesa ${esc(o.table_name)}
-      ${o.payment_status === 'paid' ? '<span class="tag green" style="vertical-align:middle">Pagado</span>' : ''}</span>
+      ${o.payment_status === 'paid' ? `<span class="tag green">${icon('check')}Pagado</span>` : ''}</span>
       <span class="clock ${cls}">${esc(o.code)} · ${age} min</span></header>
+    ${o.claimed_by ? `<div class="claimed">${icon('user')}${mio ? 'Lo estás metiendo tú' : esc(o.claimed_name) + ' lo está metiendo'}</div>` : ''}
     <ul>${linesFor(o).map((li) => `<li><b>${li.qty}×</b><span>${esc(li.name)}
       ${!state.station && li.station ? `<span class="st">${li.station === 'barra' ? 'barra' : 'cocina'}</span>` : ''}
       ${li.options?.length ? `<div class="opts">${esc(li.options.map((x) => x.name).join(', '))}</div>` : ''}
-      ${li.note ? `<div class="opts">✎ ${esc(li.note)}</div>` : ''}</span></li>`).join('')}</ul>
-    ${o.note ? `<div style="padding:0 12px 8px" class="opts">📝 ${esc(o.note)}</div>` : ''}
-    ${o.guest_name ? `<div style="padding:0 12px 8px" class="opts">👤 ${esc(o.guest_name)}</div>` : ''}
+      ${li.note ? `<div class="opts"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-note"/></svg> ${esc(li.note)}</div>` : ''}</span></li>`).join('')}</ul>
+    ${o.note ? `<div style="padding:0 12px 8px" class="opts"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-note"/></svg> ${esc(o.note)}</div>` : ''}
+    ${o.guest_name ? `<div style="padding:0 12px 8px" class="opts"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-user"/></svg> ${esc(o.guest_name)}</div>` : ''}
     <footer><strong>${money(o.total_cents)}</strong><span class="grow"></span>
-      ${can('kds') ? `<button class="btn sm ghost" data-print="${o.id}" title="Imprimir comanda">⎙</button>` : ''}
-      <button class="btn sm ghost" data-cancel="${o.id}" title="Cancelar">✕</button>
-      <button class="btn sm primary" data-adv="${o.id}">${o.status === 'served' && o.payment_status === 'paid' ? 'Cerrar' : col.next}</button></footer>
+      ${can('kds') ? `<button class="btn sm ghost" data-print="${o.id}" title="Imprimir comanda">${icon('print')}</button>` : ''}
+      <button class="btn sm ghost" data-cancel="${o.id}" title="Cancelar">${icon('x')}</button>
+      ${o.status === 'new' && !o.claimed_by
+        ? `<button class="btn sm" data-claim="${o.id}">Lo cojo yo</button>` : ''}
+      ${mio ? `<button class="btn sm ghost" data-release="${o.id}" title="Soltarlo">${icon('refresh')}</button>` : ''}
+      <button class="btn sm primary" data-adv="${o.id}" ${deOtro ? 'disabled title="Lo tiene ' + esc(o.claimed_name) + '"' : ''}>
+        ${o.status === 'served' && o.payment_status === 'paid' ? 'Cerrar' : mio ? 'Metido en TPV' : col.next}</button></footer>
   </div>`;
 }
 
@@ -172,7 +191,7 @@ function mesa(t) {
     ${t.merged_names ? `<div class="tag blue" style="margin-top:6px">+ ${esc(t.merged_names)}</div>` : ''}
     ${t.merged_into_name ? `<div class="tag" style="margin-top:6px">unida a ${esc(t.merged_into_name)}</div>` : ''}
     ${t.open_orders ? `<div style="margin-top:6px"><span class="tag green">${t.open_orders} pedido${t.open_orders > 1 ? 's' : ''} · ${money(t.open_total_cents)}</span></div>` : ''}
-    ${t.open_calls ? `<div style="margin-top:6px"><span class="tag amber">🔔 aviso</span></div>` : ''}
+    ${t.open_calls ? `<div style="margin-top:6px"><span class="tag amber"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-bell"/></svg> aviso</span></div>` : ''}
   </div>`;
 }
 
@@ -224,7 +243,18 @@ async function openAgotados() {
   await modal({ title: 'Productos agotados', body, save: '', cancel: 'Cerrar' });
 }
 
+/** Marca (o suelta) un pedido como «lo estoy metiendo yo en el TPV». */
+async function claim(id, release) {
+  try {
+    const o = await api(`/api/orders/${id}/claim`, { method: 'POST', body: { release } });
+    haptic(release ? 8 : 18);
+    upsert(o); paint();
+    if (!release) toast('Es tuyo. Mételo en el TPV y dale a «Metido».', 'ok');
+  } catch (err) { toast(err.message, 'err'); await refresh(); }
+}
+
 async function advance(id) {
+  haptic(14);
   const o = state.orders.find((x) => x.id === id);
   // Si ya se pagó desde el móvil no hay nada que cobrar: solo se cierra.
   if (o?.status === 'served' && o.payment_status === 'paid') {
@@ -334,7 +364,7 @@ async function newOrder() {
   const draw = () => {
     body.querySelector('#lines').innerHTML = lines.length
       ? `<table><tbody>${lines.map((l, i) => `<tr><td>${l.qty} × ${esc(l.name)}</td>
-          <td class="num">${money(l.price * l.qty)}</td><td><button class="btn ghost sm" data-rm="${i}">✕</button></td></tr>`).join('')}
+          <td class="num">${money(l.price * l.qty)}</td><td><button class="btn ghost sm" data-rm="${i}"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></td></tr>`).join('')}
         <tr><td><strong>Total</strong></td><td class="num"><strong>${money(lines.reduce((n, l) => n + l.price * l.qty, 0))}</strong></td><td></td></tr></tbody></table>`
       : '<div class="muted" style="font-size:13px">Sin líneas todavía.</div>';
     body.querySelectorAll('[data-rm]').forEach((b) => b.onclick = () => { lines.splice(Number(b.dataset.rm), 1); draw(); });
@@ -384,10 +414,12 @@ async function paintGate() {
 async function setupPush() {
   const btn = $('#push');
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) { btn.classList.add('hidden'); return; }
-  const reg = await navigator.serviceWorker.register('/sw.js');
+  let reg;
+  try { reg = await navigator.serviceWorker.register('/sw.js'); }
+  catch (err) { console.warn('avisos no disponibles:', err.message); btn.classList.add('hidden'); return; }
   const paintBtn = async () => {
     const sub = await reg.pushManager.getSubscription();
-    btn.textContent = sub ? '📳 Avisos activos' : '📳 Avisos';
+    btn.textContent = sub ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-vibrate"/></svg> Avisos activos' : '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-vibrate"/></svg> Avisos';
     btn.classList.toggle('green', !!sub);
     return sub;
   };
@@ -422,19 +454,19 @@ function bindChrome() {
   // Los navegadores no dejan sonar nada hasta que el usuario toca la pantalla.
   addEventListener('pointerdown', unlockAudio, { once: true });
   addEventListener('keydown', unlockAudio, { once: true });
-  $$('.tabs button').forEach((b) => b.onclick = () => {
+  $$('.tabs button').forEach((b) => b.onclick = () => transicion(() => {
     $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
     state.tab = b.dataset.tab;
     $('#tickets').classList.toggle('hidden', state.tab !== 'tickets');
     $('#mesas').classList.toggle('hidden', state.tab !== 'mesas');
-  });
+  }));
   $('#sound').onclick = () => {
     state.sound = !state.sound;
     localStorage.setItem('maitre_sound', state.sound ? '1' : '0');
-    $('#sound').textContent = state.sound ? '🔔' : '🔕';
+    $('#sound').innerHTML = icon(state.sound ? 'sound-on' : 'sound-off');
     if (state.sound) beep();
   };
-  $('#sound').textContent = state.sound ? '🔔' : '🔕';
+  $('#sound').innerHTML = icon(state.sound ? 'sound-on' : 'sound-off');
   $('#new-order').onclick = () => newOrder().catch((e) => toast(e.message, 'err'));
 }
 

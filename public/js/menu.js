@@ -1,5 +1,6 @@
 // Carta del comensal: consultar, filtrar, pedir desde la mesa y avisar al personal.
-import { api, money, esc, el, $, toast, stream, timeAgo, FSE_TEXT } from '/js/core.js';
+import { api, money, esc, el, $, toast, stream, timeAgo, icon, loader, FSE_TEXT } from '/js/core.js';
+import { arrastrable, volarAlCarrito, haptic, ocupado, MACRO } from '/js/motion.js';
 
 const [, , slug, tableToken = 'preview'] = location.pathname.split('/');
 const base = `/api/public/${encodeURIComponent(slug)}/${encodeURIComponent(tableToken)}`;
@@ -50,7 +51,7 @@ async function load() {
   try {
     state.data = await api(base + q);
   } catch (err) {
-    $('#app').innerHTML = `<div class="empty" style="padding-top:80px"><span class="ico">🚫</span>
+    $('#app').innerHTML = `<div class="empty" style="padding-top:80px"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-ban"/></svg></span>
       <h2>${esc(err.message)}</h2><p class="muted">Pide ayuda al personal del local.</p></div>`;
     return;
   }
@@ -74,7 +75,7 @@ async function load() {
       try { showConfirmation(await api(`${base}/order/${Number(vuelta)}`)); } catch { /* pedido antiguo */ }
     }
     stream(`${base}/stream`, {
-      'order.updated': (o) => { mergeOrder(o); render(); if (o.status === 'served') toast('Tu pedido está servido 🍽️', 'ok'); },
+      'order.updated': (o) => { mergeOrder(o); render(); if (o.status === 'served') toast('Tu pedido está servido <svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-menu"/></svg>', 'ok'); },
       'order.created': () => refreshOrders().then(render),
       'call.updated': () => refreshOrders().then(render),
     });
@@ -122,7 +123,7 @@ function render() {
     : `<div class="m-logo letter">${esc(v.name.trim()[0] || 'M')}</div>`;
 
   const langSwitch = v.languages.length > 1
-    ? `<select id="lang" style="width:auto;padding:6px 8px;font-size:13px;border-radius:100px">
+    ? `<select id="lang" class="m-lang">
         ${v.languages.map((l) => `<option value="${l}" ${l === state.lang ? 'selected' : ''}>${l.toUpperCase()}</option>`).join('')}
        </select>` : '';
 
@@ -148,7 +149,7 @@ function render() {
       </div>
       <div class="m-tools">
         <input class="m-search" id="search" placeholder="${t('search')}" value="${esc(state.search)}" autocomplete="off">
-        <button class="btn sm" id="filters">☰</button>
+        <button class="btn sm" id="filters"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-burger"/></svg></button>
       </div>
       ${cats.length > 1 ? `<div class="m-cats">${cats.map((c) =>
         `<div class="m-cat ${c.id === state.activeCat ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}</div>`).join('')}</div>` : ''}
@@ -160,22 +161,24 @@ function render() {
         ? `<div class="notice warn" style="margin:14px 0">Puedes mirar la carta con calma. Para pedir desde el móvil,
            el personal tiene que abrir la mesa: avísales y listo.</div>` : ''}
       ${activeOrdersHtml()}
-      ${body || `<div class="empty"><span class="ico">🔍</span>No hay platos que coincidan.</div>`}
+      ${body || `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-search"/></svg></span>No hay platos que coincidan.</div>`}
       ${uncategorised.length ? `<h2 class="cat-title">Otros</h2>${uncategorised.map(dishHtml).join('')}` : ''}
 
       ${v.service_note ? `<div class="notice" style="margin-top:26px">${esc(v.service_note)}</div>` : ''}
-      ${v.wifi_ssid ? `<div class="notice" style="margin-top:10px">📶 Wifi <strong>${esc(v.wifi_ssid)}</strong>${v.wifi_password ? ` · clave <strong>${esc(v.wifi_password)}</strong>` : ''}</div>` : ''}
+      ${v.wifi_ssid ? `<div class="notice" style="margin-top:10px"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-wifi"/></svg> Wifi <strong>${esc(v.wifi_ssid)}</strong>${v.wifi_password ? ` · clave <strong>${esc(v.wifi_password)}</strong>` : ''}</div>` : ''}
 
       <footer>
-        <div class="muted" style="font-size:12px">Carta digital de <strong>Maitre</strong> · sin registro ni cookies de seguimiento</div>
+        <a class="m-maitre" href="/" target="_blank" rel="noopener">
+          Carta digital de <img src="/assets/logotipo.png" alt="Maitre"></a>
+        <div class="muted" style="font-size:11.5px;margin-top:6px">Sin registro ni cookies de seguimiento</div>
         <div class="fse" style="text-align:left">${FSE_TEXT}</div>
         <a href="/privacidad" class="muted" style="font-size:12px">Aviso de privacidad</a>
       </footer>
     </main>
 
     ${d.table ? `<div class="m-bar">
-      ${d.can_call ? `<button class="btn" id="btn-call">🔔 ${t('call')}</button>` : ''}
-      ${d.can_order ? `<button class="btn primary" id="btn-cart">🧾 ${t('cart')}${cartCount() ? ` · <span class="badge-qty">${cartCount()}</span> ${money(cartTotal(), v.currency)}` : ''}</button>` : ''}
+      ${d.can_call ? `<button class="btn" id="btn-call">${icon('bell')} ${t('call')}</button>` : ''}
+      ${d.can_order ? `<button class="btn primary" id="btn-cart"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-receipt"/></svg> ${t('cart')}${cartCount() ? ` · <span class="badge-qty">${cartCount()}</span> ${money(cartTotal(), v.currency)}` : ''}</button>` : ''}
       ${!d.can_order && state.bill?.total_cents ? `<button class="btn" id="btn-bill">${t('bill')} · ${money(state.bill.total_cents, v.currency)}</button>` : ''}
     </div>` : ''}`;
 
@@ -184,10 +187,13 @@ function render() {
 
 function dishHtml(i) {
   const cur = state.data.venue.currency;
-  const algs = i.allergens.map((a) => state.data.catalog.allergens.find((x) => x.id === a)?.icon || '').join('');
+  const algs = i.allergens.map((a) => {
+    const f = state.data.catalog.allergens.find((x) => x.id === a);
+    return f ? `<span class="alg" title="${esc(f.label)}">${esc(f.short)}</span>` : '';
+  }).join('');
   const tags = i.tags.map((tg) => {
-    const found = state.data.catalog.tags.find((x) => x.id === tg);
-    return found ? `<span class="tag">${found.icon} ${esc(found.label)}</span>` : '';
+    const f = state.data.catalog.tags.find((x) => x.id === tg);
+    return f ? `<span class="tag">${icon(f.icon)}${esc(f.label)}</span>` : '';
   }).join('');
   const inCart = state.cart.filter((l) => l.item_id === i.id).reduce((n, l) => n + l.qty, 0);
   return `<div class="dish ${i.available ? '' : 'out'}" data-item="${i.id}">
@@ -196,9 +202,9 @@ function dishHtml(i) {
       ${i.description ? `<div class="dish-desc">${esc(i.description)}</div>` : ''}
       <div class="dish-meta">
         <span class="dish-price">${money(i.price_cents, cur)}</span>
-        ${!i.available ? `<span class="tag red">${t('out')}</span>` : ''}
+        ${!i.available ? `<span class="tag red">${icon('ban')}${t('out')}</span>` : ''}
         ${tags}
-        ${algs ? `<span class="alg" title="Alérgenos">${algs}</span>` : ''}
+        ${algs}
         ${i.kcal ? `<span class="muted" style="font-size:12px">${i.kcal} kcal</span>` : ''}
       </div>
     </div>
@@ -227,7 +233,7 @@ function activeOrdersHtml() {
 
 function openReview(rating) {
   const served = state.orders.find((o) => ['served', 'paid'].includes(o.status));
-  sheet(`<div class="sheet-head"><h3 style="margin:0">Gracias por valorar</h3><button class="btn ghost sm" data-close>✕</button></div>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">Gracias por valorar</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       <div style="font-size:26px;letter-spacing:4px;margin-bottom:12px">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</div>
       <div class="field"><label>¿Algo que contarle al local? (opcional)</label><textarea id="rc" rows="2" maxlength="300"></textarea></div>
@@ -278,10 +284,18 @@ function bind() {
 }
 
 function sheet(html, onMount) {
-  const bg = el('div', { class: 'sheet-bg', onclick: (e) => { if (e.target === bg) bg.remove(); } },
-    el('div', { class: 'sheet', html }));
+  const hoja = el('div', { class: 'sheet', html });
+  const bg = el('div', { class: 'sheet-bg', onclick: (e) => { if (e.target === bg) cerrar(); } }, hoja);
+  const cerrar = () => {
+    hoja.style.transition = `transform .3s ${MACRO}`;
+    hoja.style.transform = 'translateY(100%)';
+    bg.style.transition = 'background .3s'; bg.style.background = 'rgba(35,36,28,0)';
+    setTimeout(() => bg.remove(), 280);
+  };
   document.body.append(bg);
-  onMount?.(bg, () => bg.remove());
+  haptic(8);
+  arrastrable(bg, hoja, () => bg.remove());     // se arrastra hacia abajo para cerrarla
+  onMount?.(bg, cerrar);
   return bg;
 }
 
@@ -307,7 +321,7 @@ function openDish(id) {
     <div class="sheet-head">
       <div><h3 style="margin:0 0 4px">${esc(i.name)}</h3>
         <div class="muted" style="font-size:13.5px">${esc(i.description || '')}</div></div>
-      <button class="btn ghost sm" data-close>✕</button>
+      <button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button>
     </div>
     <div class="sheet-body">
       ${i.image_path ? `<img src="${esc(i.image_path)}" style="width:100%;border-radius:12px;margin-bottom:14px" alt="">` : ''}
@@ -317,7 +331,8 @@ function openDish(id) {
         <input id="note" placeholder="Sin cebolla, poco hecho…" maxlength="140"></div>` : ''}
     </div>
     <div class="sheet-foot">
-      <div class="qty"><button data-q="-1">−</button><span id="q">1</span><button data-q="1">+</button></div>
+      <div class="qty"><button data-q="-1" aria-label="Quitar uno">${icon('minus')}</button>
+        <span id="q" class="tabular">1</span><button data-q="1" aria-label="Añadir uno">${icon('plus')}</button></div>
       <button class="btn primary grow" id="add">${t('add')} · <span id="sum">${money(i.price_cents, cur)}</span></button>
     </div>`, (bg, close) => {
     const sum = () => {
@@ -325,7 +340,7 @@ function openDish(id) {
       bg.querySelector('#sum').textContent = money((i.price_cents + delta) * qty, cur);
     };
     bg.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => {
-      qty = Math.max(1, Math.min(20, qty + Number(b.dataset.q)));
+      qty = Math.max(1, Math.min(20, qty + Number(b.dataset.q))); haptic(9);
       bg.querySelector('#q').textContent = qty; sum();
     });
     bg.querySelectorAll('input[type=checkbox]').forEach((c) => c.onchange = () => {
@@ -350,7 +365,10 @@ function openDish(id) {
         option_ids: picked.map((o) => o.id), option_names: picked.map((o) => o.name),
         note: bg.querySelector('#note')?.value.trim() || '',
       });
-      saveCart(); close(); render(); toast(`${i.name} añadido`, 'ok');
+      const origen = bg.querySelector('#add');
+      saveCart(); haptic(14); close(); render();
+      volarAlCarrito(origen, $('#btn-cart'));
+      toast(`${i.name} añadido`, 'ok');
       suggestAfter(i);
     };
   });
@@ -364,7 +382,7 @@ function suggestAfter(item) {
   if (!sugs.length) return;
   const cur = state.data.venue.currency;
   sheet(`<div class="sheet-head"><h3 style="margin:0">¿Añades algo con ${esc(item.name)}?</h3>
-      <button class="btn ghost sm" data-close>✕</button></div>
+      <button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       ${sugs.map((x) => `<div class="line"><div class="grow"><strong>${esc(x.name)}</strong>
         ${x.description ? `<div class="muted" style="font-size:13px">${esc(x.description)}</div>` : ''}</div>
@@ -377,24 +395,22 @@ function suggestAfter(item) {
       const x = state.data.items.find((y) => y.id === Number(b.dataset.add));
       if (x.option_groups.length) { close(); openDish(x.id); return; }
       state.cart.push({ item_id: x.id, name: x.name, qty: 1, unit: x.price_cents, option_ids: [], option_names: [], note: '' });
-      saveCart(); render(); b.disabled = true; b.textContent = 'Añadido';
-      toast(`${x.name} añadido`, 'ok');
+      saveCart(); haptic(14); render();
+      volarAlCarrito(b, $('#btn-cart'));
+      b.disabled = true; b.textContent = 'Añadido';
     });
   });
 }
 
 function allergenLine(i) {
   if (!i.allergens.length) return '';
-  const names = i.allergens.map((a) => {
-    const f = state.data.catalog.allergens.find((x) => x.id === a);
-    return f ? `${f.icon} ${f.label}` : a;
-  }).join(' · ');
-  return `<div class="notice warn" style="margin-bottom:14px">Contiene: ${esc(names)}</div>`;
+  const names = i.allergens.map((a) => state.data.catalog.allergens.find((x) => x.id === a)?.label || a).join(' · ');
+  return `<div class="notice warn" style="margin-bottom:14px">${icon('alert')} Contiene: ${esc(names)}</div>`;
 }
 
 function showInfo(i) {
   if (!i) return;
-  sheet(`<div class="sheet-head"><h3 style="margin:0">${esc(i.name)}</h3><button class="btn ghost sm" data-close>✕</button></div>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">${esc(i.name)}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       ${i.image_path ? `<img src="${esc(i.image_path)}" style="width:100%;border-radius:12px;margin-bottom:14px" alt="">` : ''}
       <p>${esc(i.description || '')}</p>
@@ -406,19 +422,21 @@ function showInfo(i) {
 function openCart() {
   const cur = state.data.venue.currency;
   const draw = () => `
-    <div class="sheet-head"><h3 style="margin:0">${t('cart')}</h3><button class="btn ghost sm" data-close>✕</button></div>
+    <div class="sheet-head"><h3 style="margin:0">${t('cart')}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       ${state.cart.length ? state.cart.map((l, idx) => `<div class="line">
         <div class="grow"><strong>${esc(l.name)}</strong>
           ${l.option_names.length ? `<div class="muted" style="font-size:13px">${esc(l.option_names.join(', '))}</div>` : ''}
-          ${l.note ? `<div class="muted" style="font-size:13px">✎ ${esc(l.note)}</div>` : ''}
+          ${l.note ? `<div class="muted" style="font-size:13px"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-note"/></svg> ${esc(l.note)}</div>` : ''}
           <div class="qty" style="margin-top:8px;width:fit-content">
-            <button data-line="${idx}" data-d="-1">−</button><span>${l.qty}</span><button data-line="${idx}" data-d="1">+</button>
+            <button data-line="${idx}" data-d="-1">${icon('minus')}</button>
+            <span class="tabular">${l.qty}</span>
+            <button data-line="${idx}" data-d="1">${icon('plus')}</button>
           </div>
         </div>
         <div class="right"><strong>${money(l.unit * l.qty, cur)}</strong>
           <div><button class="btn ghost sm" data-del="${idx}" style="color:var(--red)">Quitar</button></div></div>
-      </div>`).join('') : `<div class="empty"><span class="ico">🧾</span>${t('empty')}</div>`}
+      </div>`).join('') : `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-receipt"/></svg></span>${t('empty')}</div>`}
       ${state.data.ask_guest_name ? `<div class="field" style="margin-top:16px"><label>${t('name')}</label>
         <input id="guest" maxlength="40" value="${esc(localStorage.getItem('maitre_guest') || '')}"></div>` : ''}
       ${state.cart.length ? `<div class="field"><label>${t('note')}</label><input id="onote" maxlength="200" placeholder="Todo junto, gracias"></div>` : ''}
@@ -447,7 +465,7 @@ function openCart() {
       root.querySelector('[data-close]').onclick = closeFn;
       root.querySelectorAll('[data-line]').forEach((b) => b.onclick = () => {
         const l = state.cart[Number(b.dataset.line)];
-        l.qty += Number(b.dataset.d);
+        l.qty += Number(b.dataset.d); haptic(9);
         if (l.qty < 1) state.cart.splice(Number(b.dataset.line), 1);
         saveCart(); rebind(); render();
       });
@@ -455,8 +473,7 @@ function openCart() {
         state.cart.splice(Number(b.dataset.del), 1); saveCart(); rebind(); render();
       });
       const send = root.querySelector('#send');
-      if (send) send.onclick = async () => {
-        send.disabled = true;
+      if (send) send.onclick = () => ocupado(send, async () => {
         const guest = root.querySelector('#guest')?.value.trim() || '';
         if (guest) localStorage.setItem('maitre_guest', guest);
         const modo = root.querySelector('input[name=pm]:checked')?.value
@@ -467,7 +484,7 @@ function openCart() {
             session_id: state.sessionId, guest_name: guest, note: root.querySelector('#onote')?.value.trim() || '',
             payment_mode: modo, code: state.tableCode,
           } });
-          state.cart = []; saveCart();
+          state.cart = []; saveCart(); haptic(26);
           if (order.checkout) { location.href = order.checkout.url; return; }
           state.orders.unshift(order);
           closeFn(); render();
@@ -481,9 +498,8 @@ function openCart() {
           } else {
             toast(err.message, 'err');
           }
-          send.disabled = false;
         }
-      };
+      });
     };
     wire(bg2, close);
   });
@@ -498,10 +514,10 @@ function showConfirmation(order) {
     <div class="sheet-head"><div>
       <h3 style="margin:0 0 2px">${t('confirmed')}</h3>
       <div class="muted" style="font-size:13.5px">Pedido ${esc(order.code)} · mesa ${esc(state.data.table?.name || '')}</div>
-    </div><button class="btn ghost sm" data-close>✕</button></div>
+    </div><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       <div class="center" style="padding:6px 0 18px">
-        <div style="font-size:42px;line-height:1">${pagado ? '✅' : '📨'}</div>
+        <div style="font-size:42px;line-height:1">${pagado ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg>' : '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-send"/></svg>'}</div>
         <p class="muted" style="margin:10px 0 0;font-size:14px">
           ${pagado ? 'Pago confirmado. Ya lo están preparando.' : 'Enviado a la barra. Lo pagas en el local al terminar.'}
         </p>
@@ -526,15 +542,15 @@ function showConfirmation(order) {
 
 function openCall() {
   const opts = [
-    { type: 'waiter', icon: '🙋', label: 'Que venga alguien' },
-    { type: 'bill', icon: '🧾', label: 'La cuenta' },
-    { type: 'water', icon: '💧', label: 'Agua' },
-    { type: 'help', icon: '❓', label: 'Una duda' },
+    { type: 'waiter', ico: 'hand', label: 'Que venga alguien' },
+    { type: 'bill', ico: 'receipt', label: 'La cuenta' },
+    { type: 'water', ico: 'drop', label: 'Agua' },
+    { type: 'help', ico: 'help', label: 'Una duda' },
   ];
-  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('call')}</h3><button class="btn ghost sm" data-close>✕</button></div>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('call')}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       <div class="grid g2" style="grid-template-columns:1fr 1fr">
-        ${opts.map((o) => `<button class="callbtn" data-type="${o.type}"><span>${o.icon}</span>${o.label}</button>`).join('')}
+        ${opts.map((o) => `<button class="callbtn" data-type="${o.type}">${icon(o.ico, 'i-lg')}${o.label}</button>`).join('')}
       </div>
       ${state.bill?.total_cents ? `<div class="notice" style="margin-top:16px">${t('bill')}:
         <strong>${money(state.bill.total_cents, state.data.venue.currency)}</strong></div>` : ''}
@@ -544,7 +560,7 @@ function openCall() {
       b.disabled = true;
       try {
         const r = await api(`${base}/call`, { method: 'POST', body: { type: b.dataset.type, session_id: state.sessionId } });
-        close(); toast(r.duplicate ? 'Ya lo habías pedido, están en ello' : t('called'), 'ok');
+        haptic(22); close(); toast(r.duplicate ? 'Ya lo habías pedido, están en ello' : t('called'), 'ok');
       } catch (err) { toast(err.message, 'err'); b.disabled = false; }
     });
   });
@@ -553,7 +569,7 @@ function openCall() {
 function openBill() {
   const cur = state.data.venue.currency;
   const b = state.bill;
-  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('bill')}</h3><button class="btn ghost sm" data-close>✕</button></div>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('bill')}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       ${b.orders.flatMap((o) => o.items).map((li) => `<div class="line">
         <div class="grow">${li.qty} × ${esc(li.name)}</div><div>${money(li.line_total_cents, cur)}</div></div>`).join('')}
@@ -567,15 +583,15 @@ function openBill() {
 
 function openFilters() {
   const cat = state.data.catalog;
-  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('filters')}</h3><button class="btn ghost sm" data-close>✕</button></div>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('filters')}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       <label>${t('diet')}</label>
       <div class="row wrap-row" style="margin-bottom:18px">
-        ${cat.tags.map((tg) => `<button class="btn sm ${state.diet === tg.id ? 'primary' : ''}" data-diet="${tg.id}">${tg.icon} ${esc(tg.label)}</button>`).join('')}
+        ${cat.tags.map((tg) => `<button class="btn sm ${state.diet === tg.id ? 'primary' : ''}" data-diet="${tg.id}">${icon(tg.icon)}${esc(tg.label)}</button>`).join('')}
       </div>
       <label>${t('allergensOff')}</label>
       <div class="row wrap-row">
-        ${cat.allergens.map((a) => `<button class="btn sm ${state.hideAllergens.includes(a.id) ? 'danger' : ''}" data-alg="${a.id}">${a.icon} ${esc(a.label)}</button>`).join('')}
+        ${cat.allergens.map((a) => `<button class="btn sm ${state.hideAllergens.includes(a.id) ? 'danger' : ''}" data-alg="${a.id}">${esc(a.label)}</button>`).join('')}
       </div>
       <p class="muted" style="font-size:12.5px;margin-top:16px">La información de alérgenos la facilita el establecimiento.
       Ante cualquier duda o alergia grave, consúltalo con el personal.</p>
@@ -606,9 +622,14 @@ function openFilters() {
 addEventListener('scroll', () => {
   const titles = [...document.querySelectorAll('.cat-title[id]')];
   const cur = titles.filter((h) => h.getBoundingClientRect().top < 160).pop();
+  document.documentElement.classList.toggle('scrolled', scrollY > 30);
   if (!cur) return;
   const id = cur.id.replace('cat-', '');
-  document.querySelectorAll('.m-cat').forEach((c) => c.classList.toggle('on', c.dataset.cat === id));
+  document.querySelectorAll('.m-cat').forEach((c) => {
+    const activa = c.dataset.cat === id;
+    if (activa && !c.classList.contains('on')) c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    c.classList.toggle('on', activa);
+  });
 }, { passive: true });
 
 load();

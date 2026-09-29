@@ -24,7 +24,7 @@ export async function render(root) {
           <p class="muted" style="font-size:13.5px">${esc(p.tagline)}</p>
           <ul style="list-style:none;padding:0;margin:0 0 16px;font-size:14px">
             ${(() => {
-              const prev = { servicio: 'mesa', local: 'servicio' }[p.id];
+              const prev = { servicio: 'mesa' }[p.id];
               const base = prev ? b.plans.find((x) => x.id === prev)?.features || [] : [];
               const extra = p.features.filter((f) => !base.includes(f));
               return (prev ? [`<li style="padding:4px 0">✓ Todo lo del plan ${esc(b.plans.find((x) => x.id === prev)?.name)}</li>`] : [])
@@ -61,8 +61,17 @@ export async function render(root) {
       </div>
     </div>
 
-    <p class="fse">Los precios mostrados no incluyen el 21% de IVA. Maitre no almacena datos de tarjetas: el cobro se
-    tramita mediante un proveedor de pago autorizado.</p>`;
+    <div class="card" style="margin-top:20px">
+      <h3>Lo que viene</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 10px">Estas funciones están en preparación. Cuando estén listas
+      te avisamos: si ya eres cliente, entran en tu plan sin subirte el precio.</p>
+      <div class="row wrap-row">
+        <span class="tag">Conexión con tu TPV</span>
+        <span class="tag">Cobro con tarjeta desde el móvil</span>
+        <span class="tag">Varios locales en una cuenta</span>
+      </div>
+    </div>
+    <p class="fse">Los precios mostrados no incluyen el 21% de IVA.</p>`;
 
   $$('[data-plan]').forEach((btn) => btn.onclick = async () => {
     const plan = btn.dataset.plan;
@@ -85,9 +94,9 @@ export async function render(root) {
 }
 
 const FEATURES = {
-  menu: 'Carta digital', qr: 'QR por mesa', calls: 'Aviso al personal', analytics_basic: 'Analítica básica',
-  staff_basic: 'Acceso del personal', orders: 'Pedido desde la mesa', kds: 'Cola de sala y cocina',
-  modifiers: 'Variantes y extras', upsell: 'Sugerencias', staff: 'Equipo y roles', tables: 'Gestión de mesas',
-  export: 'Exportaciones', analytics: 'Analítica de servicio', integrations: 'Integraciones con TPV',
-  payments: 'Pago con el móvil', reviews: 'Reseñas y opt-in', multi_venue: 'Varios locales',
+  menu: 'Carta digital en varios idiomas', qr: 'QR por mesa', calls: 'Aviso al personal',
+  staff_basic: 'Acceso del personal a la sala', orders: 'Pedido desde la mesa', modifiers: 'Variantes y extras',
+  kds: 'Barra y cocina, comandas y agotados', upsell: 'Sugerencias al pedir', staff: 'Equipo con roles',
+  tables: 'Cambio y unión de mesas', export: 'Exportaciones', analytics: 'Analítica',
+  reviews: 'Reseñas y opt-in',
 };

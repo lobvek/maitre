@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS venues (
   pilot TEXT DEFAULT '{}',                  -- diseño del piloto: objetivo, baseline, fechas, depósito
   trial_ends_at TEXT,
   is_pilot INTEGER DEFAULT 0,
+  is_demo INTEGER NOT NULL DEFAULT 0,       -- local de muestra: sirve para enseñar, no es un cliente
   status TEXT NOT NULL DEFAULT 'active',    -- active | suspended | churned
   onboarding_step INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -165,6 +166,9 @@ CREATE TABLE IF NOT EXISTS orders (
   total_cents INTEGER NOT NULL DEFAULT 0,
   payment_method TEXT,                      -- cash | card | app
   payment_status TEXT NOT NULL DEFAULT 'unpaid', -- unpaid | pending | paid | failed
+  claimed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- quién lo está metiendo en el TPV
+  claimed_name TEXT DEFAULT '',
+  claimed_at TEXT,
   payment_ref TEXT DEFAULT '',              -- referencia de la pasarela
   paid_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -301,6 +305,10 @@ const MIGRATIONS = [
   ['tables', 'lot', "TEXT DEFAULT ''"],
   ['items', 'suggests', "TEXT DEFAULT '[]'"],
   ['venues', 'telegram_chat_id', "TEXT DEFAULT ''"],
+  ['orders', 'claimed_by', 'INTEGER'],
+  ['orders', 'claimed_name', "TEXT DEFAULT ''"],
+  ['orders', 'claimed_at', 'TEXT'],
+  ['venues', 'is_demo', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 function migrate(database) {

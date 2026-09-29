@@ -75,7 +75,7 @@ function seedVenue({ slug, name, city, address, plan, isPilot, color, carta, tab
     slug, name, city, address, legal_name: `${name} SCP`, nif: 'B0000000' + Math.floor(Math.random() * 9),
     email: ownerEmail, phone: '93 000 00 00', brand_color: color,
     plan, plan_since: addDays(-40), trial_ends_at: addDays(plan === 'trial' ? 18 : -5),
-    is_pilot: isPilot ? 1 : 0, onboarding_step: 5,
+    is_pilot: isPilot ? 1 : 0, is_demo: 1, onboarding_step: 5,
     plan_until: plan === 'founders' ? addDays(24 * 30) : null,
     pilot: JSON.stringify(pilot),
     tax_rate: 1000, prices_include_tax: 1,

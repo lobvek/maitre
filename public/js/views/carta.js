@@ -1,5 +1,5 @@
 // Gestor de carta: categorías, productos, alérgenos, opciones e importación.
-import { api, money, esc, el, $, $$, toast, modal, confirmDialog } from '/js/core.js';
+import { api, money, esc, el, $, $$, toast, modal, confirmDialog, icon, loader } from '/js/core.js';
 import { app, can, hasFeature } from '/js/app.js';
 
 let cats = [], items = [], catalog = null, sel = null;
@@ -63,7 +63,7 @@ function paint() {
       <button class="btn ghost sm grow" style="justify-content:flex-start;${c.id === sel ? 'background:var(--brand-soft);color:var(--brand);font-weight:700' : ''}"
         data-cat="${c.id}">${esc(nameIn(c.name))}${c.station ? ` <span class="muted" style="font-weight:400;font-size:11px">· ${c.station}</span>` : ''}
         <span class="muted" style="margin-left:auto;font-weight:400">${items.filter((i) => i.category_id === c.id).length}</span></button>
-      ${can('manager') ? `<button class="btn ghost sm" data-editcat="${c.id}" title="Editar">⋯</button>` : ''}
+      ${can('manager') ? `<button class="btn ghost sm" data-editcat="${c.id}" title="Editar"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-settings"/></svg></button>` : ''}
     </div>`).join('') || '<div class="muted" style="padding:10px;font-size:13px">Sin categorías todavía.</div>'}
   </div>`;
 
@@ -74,16 +74,16 @@ function paint() {
       <td style="width:52px">${i.image_path ? `<img src="${esc(i.image_path)}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">` : ''}</td>
       <td><strong>${esc(nameIn(i.name))}</strong>
         <div class="muted movil-no" style="font-size:12.5px">${esc(nameIn(i.description) || '')}</div>
-        <div style="margin-top:4px">${i.allergens.map((a) => catalog.allergens.find((x) => x.id === a)?.icon || '').join('')}
+        <div style="margin-top:4px">${i.allergens.map((a) => { const f = catalog.allergens.find((x) => x.id === a); return f ? `<span class="alg">${esc(f.short)}</span>` : ''; }).join('')}
         ${i.option_groups.length ? `<span class="tag" style="margin-left:6px">${i.option_groups.length} grupo(s) de opciones</span>` : ''}</div></td>
       <td class="num">${money(i.price_cents, app.venue.currency)}</td>
       <td><button class="btn sm ${i.available ? 'green' : 'danger'}" data-avail="${i.id}">${i.available ? 'Disponible' : 'Agotado'}</button></td>
       <td class="right" style="white-space:nowrap">
-        ${can('manager') ? `<button class="btn ghost sm movil-no" data-move="${i.id}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>↑</button>
-        <button class="btn ghost sm movil-no" data-move="${i.id}" data-dir="1" ${idx === list.length - 1 ? 'disabled' : ''}>↓</button>
+        ${can('manager') ? `<button class="btn ghost sm movil-no" data-move="${i.id}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-up"/></svg></button>
+        <button class="btn ghost sm movil-no" data-move="${i.id}" data-dir="1" ${idx === list.length - 1 ? 'disabled' : ''}><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-down"/></svg></button>
         <button class="btn sm" data-edit="${i.id}">Editar</button>` : ''}</td>
     </tr>`).join('')}</tbody></table></div>`
-    : `<div class="empty"><span class="ico">🍽️</span>Esta categoría todavía no tiene productos.</div>`;
+    : `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-menu"/></svg></span>Esta categoría todavía no tiene productos.</div>`;
 
   $$('[data-cat]').forEach((b) => b.onclick = () => { sel = Number(b.dataset.cat); paint(); });
   $$('[data-editcat]').forEach((b) => b.onclick = () => editCategory(cats.find((c) => c.id === Number(b.dataset.editcat))));
@@ -166,10 +166,10 @@ async function editItem(item) {
       <div class="field"><label>Kcal</label><input id="kcal" type="number" min="0" value="${item?.kcal ?? ''}"></div>
     </div>
     <div class="field"><label>Alérgenos</label><div class="row wrap-row" id="algs">
-      ${catalog.allergens.map((a) => `<button type="button" class="btn sm ${item?.allergens.includes(a.id) ? 'danger' : ''}" data-a="${a.id}">${a.icon} ${esc(a.label)}</button>`).join('')}
+      ${catalog.allergens.map((a) => `<button type="button" class="btn sm ${item?.allergens.includes(a.id) ? 'danger' : ''}" data-a="${a.id}">${esc(a.label)}</button>`).join('')}
     </div></div>
     <div class="field"><label>Etiquetas</label><div class="row wrap-row" id="tags">
-      ${catalog.tags.map((t) => `<button type="button" class="btn sm ${item?.tags.includes(t.id) ? 'primary' : ''}" data-t="${t.id}">${t.icon} ${esc(t.label)}</button>`).join('')}
+      ${catalog.tags.map((t) => `<button type="button" class="btn sm ${item?.tags.includes(t.id) ? 'primary' : ''}" data-t="${t.id}">${icon(t.icon)}${esc(t.label)}</button>`).join('')}
     </div></div>
     ${item && hasFeature('upsell') ? `<div class="field"><label>Sugerir junto a este plato (máx. 4)</label>
       <div class="row wrap-row" id="sugs">
@@ -209,10 +209,10 @@ async function editItem(item) {
         <div class="card flat" style="padding:12px;margin-bottom:10px">
           <div class="spread"><strong>${esc(g.name)}</strong>
             <span><span class="muted" style="font-size:12.5px">elige ${g.min_select}–${g.max_select}</span>
-            <button class="btn ghost sm" data-delg="${g.id}">✕</button></span></div>
+            <button class="btn ghost sm" data-delg="${g.id}"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></span></div>
           ${g.options.map((o) => `<div class="spread" style="font-size:13.5px;padding:3px 0">
             <span>${esc(o.name)}</span><span class="muted">${o.price_delta_cents ? '+' + money(o.price_delta_cents) : 'incluido'}
-            <button class="btn ghost sm" data-delo="${o.id}">✕</button></span></div>`).join('')}
+            <button class="btn ghost sm" data-delo="${o.id}"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></span></div>`).join('')}
           <button class="btn sm" data-addo="${g.id}" style="margin-top:8px">+ Opción</button>
         </div>`).join('');
       body.querySelectorAll('[data-addo]').forEach((b) => b.onclick = async () => {

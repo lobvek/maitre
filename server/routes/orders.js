@@ -4,7 +4,7 @@ import { all, get, insert, update, run, audit } from '../db.js';
 import { requireAuth, requireRole, requireVenue } from '../auth.js';
 import { requireFeature } from '../plans.js';
 import { publish, venueChannel, tableChannel, subscribe } from '../realtime.js';
-import { createOrder, setOrderStatus, hydrateOrder, tableBill, priceLines, totals, OPEN_STATUSES, nextStatus, VISIBLE_TO_STAFF } from '../orders-core.js';
+import { createOrder, setOrderStatus, hydrateOrder, tableBill, priceLines, totals, claimOrder, OPEN_STATUSES, nextStatus, VISIBLE_TO_STAFF } from '../orders-core.js';
 import { bad, ok, nowSql, euros, i18n, parseJson } from '../utils.js';
 
 export const router = Router();
@@ -59,6 +59,13 @@ router.get('/:id', (req, res) => {
   const o = get('SELECT * FROM orders WHERE id = ? AND venue_id = ?', Number(req.params.id), req.venue.id);
   if (!o) return bad(res, 'Pedido no encontrado.', 404);
   res.json(hydrateOrder(o));
+});
+
+/** POST /api/orders/:id/claim — «lo cojo yo» / soltarlo. */
+router.post('/:id/claim', (req, res) => {
+  const out = claimOrder(req.venue, req.params.id, req.user, !!req.body.release);
+  if (out.error) return res.status(out.code || 400).json({ error: 'claim', message: out.error, taken_by: out.taken_by });
+  res.json(out.order);
 });
 
 /** Avanza al siguiente estado o fija uno concreto. */

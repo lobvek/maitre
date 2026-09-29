@@ -21,7 +21,7 @@ export async function render(root) {
   ];
   const pending = steps.filter((s) => !s.done);
 
-  const LLAMADAS = { waiter: '🙋 Camarero', bill: '🧾 La cuenta', water: '💧 Agua', help: '❓ Duda' };
+  const LLAMADAS = { waiter: '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-hand"/></svg> Camarero', bill: '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-receipt"/></svg> La cuenta', water: '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-drop"/></svg> Agua', help: '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-help"/></svg> Duda' };
 
   root.append(el('div', { html: `
     ${calls.length ? `<div class="notice warn" style="margin-bottom:18px">
@@ -34,7 +34,7 @@ export async function render(root) {
       <div class="stack">
         ${steps.map((s) => `<a href="${esc(s.href)}" ${s.href.startsWith('http') ? 'target="_blank"' : ''}
           style="display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit">
-          <span style="font-size:18px">${s.done ? '✅' : '⬜️'}</span>
+          <span style="font-size:18px">${s.done ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg>' : ''}</span>
           <span class="grow"><strong style="${s.done ? 'opacity:.5' : ''}">${esc(s.label)}</strong>
             <span class="muted" style="font-size:13px"> · ${esc(s.hint)}</span></span>
           ${s.done ? '' : '<span class="btn sm">Ir</span>'}
@@ -42,14 +42,16 @@ export async function render(root) {
       </div>
     </div>` : ''}
 
-    <div class="grid g4" style="margin-bottom:22px">
-      <div class="kpi"><div class="k">Ventas de hoy</div><div class="v">${money(revenue, v.currency)}</div>
+    <div class="grid g4 stagger" style="margin-bottom:22px">
+      <div class="kpi"><div class="k">Ventas de hoy</div>
+        <div class="v" data-count="${revenue}" data-count-currency="${v.currency}">${money(revenue, v.currency)}</div>
         <div class="d">${paid.length} pedidos cerrados</div></div>
-      <div class="kpi"><div class="k">Pedidos abiertos</div><div class="v">${open.length}</div>
+      <div class="kpi"><div class="k">Pedidos abiertos</div><div class="v" data-count="${open.length}">${open.length}</div>
         <div class="d">${calls.length} aviso${calls.length === 1 ? '' : 's'} sin atender</div></div>
-      <div class="kpi"><div class="k">Ticket medio</div><div class="v">${money(paid.length ? revenue / paid.length : 0, v.currency)}</div>
+      <div class="kpi"><div class="k">Ticket medio</div>
+        <div class="v" data-count="${paid.length ? Math.round(revenue / paid.length) : 0}" data-count-currency="${v.currency}">${money(paid.length ? revenue / paid.length : 0, v.currency)}</div>
         <div class="d">solo pedidos por QR y sala</div></div>
-      <div class="kpi"><div class="k">Mesas</div><div class="v">${tables.tables.length}</div>
+      <div class="kpi"><div class="k">Mesas</div><div class="v" data-count="${tables.tables.length}">${tables.tables.length}</div>
         <div class="d">${tables.tables.filter((t) => t.status === 'occupied').length} ocupadas ahora</div></div>
     </div>
 

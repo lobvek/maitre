@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getDb, get, insert, all, ROOT, UPLOAD_DIR } from './db.js';
-import { expirePendingPayments } from './orders-core.js';
+import { expirePendingPayments, releaseStaleClaims } from './orders-core.js';
 import { cookieParser, loadUser } from './auth.js';
 import { router as authRouter } from './routes/auth.js';
 import { router as venueRouter } from './routes/venue.js';
@@ -110,8 +110,9 @@ export function createApp() {
 
   // Los pedidos que se quedan a medias en la pasarela no deben ocupar la mesa para siempre.
   const sweep = setInterval(() => {
-    try { expirePendingPayments(30); } catch (err) { console.error('[maitre] limpieza de pagos', err.message); }
-  }, 5 * 60000);
+    try { expirePendingPayments(30); releaseStaleClaims(5); }
+    catch (err) { console.error('[maitre] limpieza periódica', err.message); }
+  }, 60000);
   sweep.unref?.();
 
   return app;

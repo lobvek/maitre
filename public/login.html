@@ -3,18 +3,26 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entrar · Maitre</title>
+<link rel="icon" href="/assets/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/figtree-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#646B41">
 <link rel="stylesheet" href="/css/base.css">
 <style>
-  body { display: grid; place-items: center; min-height: 100vh; padding: 24px; }
-  .box { width: min(400px, 100%); }
-  .logo { font-family: var(--serif); font-size: 30px; text-align: center; margin-bottom: 6px; }
-  .demo { font-size: 12.5px; line-height: 1.8; }
-  .demo code { background: var(--surface-2); padding: 2px 6px; border-radius: 5px; cursor: pointer; }
+  body { display: grid; place-items: center; min-height: 100vh; padding: 26px 20px;
+    background: radial-gradient(120% 90% at 50% -10%, var(--g-100) 0%, var(--cream) 55%); }
+  .box { width: min(430px, 100%); }
+  .logo { display: block; width: 168px; margin: 0 auto 12px; }
+  .demo { font-size: 12.8px; line-height: 1.9; }
+  .demo code { background: var(--g-50); padding: 2.5px 7px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line-2); transition: all var(--t-fast); }
+  .demo code:hover { border-color: var(--g-300); background: var(--g-100); }
 </style>
 </head>
 <body>
 <div class="box">
-  <div class="logo">Maitre</div>
+  <img class="logo" src="/assets/logo.png" alt="Maitre">
   <p class="center muted" style="margin-bottom:22px">La mesa, conectada.</p>
   <form class="card" id="form">
     <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required autofocus></div>

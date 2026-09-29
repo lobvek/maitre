@@ -4,6 +4,20 @@ import { startServer, signup } from './helpers.js';
 
 let srv;
 before(async () => { srv = await startServer(); });
+
+/** Abre una función en preparación para un local, como haría Maitre desde su consola. */
+async function abrirBeta(venueId, clave) {
+  const { hashPassword } = await import('../server/auth.js');
+  const { insert, get } = await import('../server/db.js');
+  const correo = 'beta-op@maitre.test';
+  if (!get('SELECT id FROM users WHERE email = ?', correo)) {
+    insert('users', { venue_id: null, email: correo, password_hash: hashPassword('contrasena123'), name: 'Op', role: 'superadmin' });
+  }
+  const antes = srv.jar.cookie;
+  await srv.request('/api/auth/login', { method: 'POST', body: { email: correo, password: 'contrasena123' } });
+  await srv.request(`/api/admin/venues/${venueId}`, { method: 'PATCH', body: { beta: { [clave]: true } } });
+  srv.jar.cookie = antes;   // devuelve la sesión al dueño del local
+}
 after(async () => { await srv.close(); });
 
 describe('cuentas', () => {
@@ -310,7 +324,8 @@ describe('permisos por rol', () => {
 describe('cobro del pedido antes de mandarlo a barra', () => {
   async function localConCobro(modo) {
     const { data: alta } = await signup(srv.request, { venue_name: `Cobro ${modo}` });
-    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'local' } });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'servicio' } });
+    await abrirBeta(alta.venue.id, 'payments');
     await srv.request('/api/venue', { method: 'PATCH', body: { payment_mode: modo } });
     const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: 'Carta' } });
     const item = await srv.request('/api/menu/items', { method: 'POST', body: { name: 'Caña', price: 2.6, category_id: cat.data.id } });
@@ -403,6 +418,20 @@ describe('cobro del pedido antes de mandarlo a barra', () => {
 
     const malo = await srv.request('/api/venue', { method: 'PATCH', body: { payment_mode: 'gratis_total' } });
     assert.equal(malo.status, 400);
+  });
+
+  test('sin la función abierta, el cobro con el móvil no se puede activar por la cara', async () => {
+    const { data: alta } = await signup(srv.request, { venue_name: 'Beta Test' });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'servicio' } });
+    await srv.request('/api/venue', { method: 'PATCH', body: { payment_mode: 'online_required' } });
+    const t = (await srv.request('/api/tables')).data.tables[0];
+    const carta = await srv.request(`/api/public/${alta.venue.slug}/${t.token}`, { cookies: false });
+    assert.equal(carta.data.payment.online, false, 'está en preparación, no se vende');
+
+    // Y el local no puede abrírsela él mismo tocando sus propios ajustes.
+    await srv.request('/api/venue', { method: 'PATCH', body: { features: { beta_payments: true } } });
+    const otra = await srv.request(`/api/public/${alta.venue.slug}/${t.token}`, { cookies: false });
+    assert.equal(otra.data.payment.online, false, 'la función en preparación solo la abre Maitre');
   });
 });
 
@@ -522,8 +551,9 @@ describe('integración con TPV', () => {
   });
 
   test('solo se admiten URLs http(s) y se genera clave de firma', async () => {
-    await signup(srv.request, { venue_name: 'Webhook Test' });
-    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'local' } });
+    const { data: alta } = await signup(srv.request, { venue_name: 'Webhook Test' });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'servicio' } });
+    await abrirBeta(alta.venue.id, 'integrations');
     const malo = await srv.request('/api/venue', { method: 'PATCH', body: { webhook_url: 'javascript:alert(1)' } });
     assert.equal(malo.status, 400);
     const bueno = await srv.request('/api/venue', { method: 'PATCH', body: { webhook_url: 'https://tpv.example.com/hook' } });
@@ -542,19 +572,20 @@ describe('arquitectura de precios del estudio', () => {
     const f = await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'founders' } });
     assert.equal(f.status, 400);
     const b = await srv.request('/api/billing');
-    assert.deepEqual(b.data.plans.map((p) => p.id), ['mesa', 'servicio', 'local', 'founders']);
+    assert.deepEqual(b.data.plans.map((p) => p.id), ['mesa', 'servicio', 'founders']);
     assert.ok(b.data.plans.find((p) => p.id === 'mesa').features.includes('orders'));
     assert.ok(!b.data.plans.find((p) => p.id === 'mesa').features.includes('analytics'));
     assert.equal(b.data.plans.find((p) => p.id === 'servicio').price_cents, 3900);
   });
 
-  test('el pago con el móvil solo entra con el plan Local', async () => {
-    const { data: alta } = await signup(srv.request, { venue_name: 'Pago Plan Test' });
-    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'servicio' } });
-    await srv.request('/api/venue', { method: 'PATCH', body: { payment_mode: 'online_required' } });
-    const t = (await srv.request('/api/tables')).data.tables[0];
-    const carta = await srv.request(`/api/public/${alta.venue.slug}/${t.token}`, { cookies: false });
-    assert.equal(carta.data.payment.online, false);
+  test('solo se venden los planes cuyas funciones existen de verdad', async () => {
+    const { PLANS, ROADMAP, SELF_SERVICE } = await import('../server/plans.js');
+    assert.deepEqual(SELF_SERVICE, ['mesa', 'servicio']);
+    for (const id of SELF_SERVICE) {
+      for (const f of PLANS[id].features) {
+        assert.ok(!ROADMAP.includes(f), `${f} está en preparación y no puede venderse en el plan ${id}`);
+      }
+    }
   });
 });
 
@@ -684,5 +715,81 @@ describe('avisos al personal en el móvil', () => {
     assert.equal(v.data.telegram_chat_id, '-100123');
     const t = await srv.request('/api/push/telegram-test', { method: 'POST' });
     assert.equal(t.status, 409);
+  });
+});
+
+describe('que no lo metan dos camareros a la vez', () => {
+  test('un pedido cogido queda bloqueado para el resto y se libera al avanzar', async () => {
+    const { data: alta } = await signup(srv.request, { venue_name: 'TPV Test' });
+    await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'servicio' } });
+    const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: 'Carta' } });
+    const item = await srv.request('/api/menu/items', { method: 'POST', body: { name: 'Caña', price: 2.6, category_id: cat.data.id } });
+    const t = (await srv.request('/api/tables')).data.tables[0];
+    await srv.request('/api/auth/team', { method: 'POST', body: { email: 'iu@tpv.dev', password: 'contrasena123', name: 'Iu', role: 'staff' } });
+    await srv.request('/api/auth/team', { method: 'POST', body: { email: 'nadia@tpv.dev', password: 'contrasena123', name: 'Nadia', role: 'staff' } });
+    const pedido = await srv.request(`/api/public/${alta.venue.slug}/${t.token}/order`, {
+      method: 'POST', cookies: false, body: { lines: [{ item_id: item.data.id, qty: 1 }] },
+    });
+
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: 'iu@tpv.dev', password: 'contrasena123' } });
+    const mio = await srv.request(`/api/orders/${pedido.data.id}/claim`, { method: 'POST' });
+    assert.equal(mio.data.claimed_name, 'Iu');
+
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: 'nadia@tpv.dev', password: 'contrasena123' } });
+    const ajeno = await srv.request(`/api/orders/${pedido.data.id}/claim`, { method: 'POST' });
+    assert.equal(ajeno.status, 409);
+    assert.match(ajeno.data.message, /Iu ya lo está metiendo/);
+    const soltar = await srv.request(`/api/orders/${pedido.data.id}/claim`, { method: 'POST', body: { release: true } });
+    assert.equal(soltar.status, 403, 'un compañero no puede soltarle el pedido a otro');
+
+    // Al marcarlo como metido (aceptado), la marca desaparece y queda libre.
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: 'iu@tpv.dev', password: 'contrasena123' } });
+    const aceptado = await srv.request(`/api/orders/${pedido.data.id}/status`, { method: 'PATCH' });
+    assert.equal(aceptado.data.status, 'accepted');
+    assert.equal(aceptado.data.claimed_by, null);
+  });
+
+  test('las marcas olvidadas se sueltan solas', async () => {
+    const { releaseStaleClaims } = await import('../server/orders-core.js');
+    const { run, get } = await import('../server/db.js');
+    const abierto = get(`SELECT id FROM orders WHERE status IN ('new','accepted') LIMIT 1`);
+    run(`UPDATE orders SET claimed_by = 1, claimed_name = 'Olvidado', claimed_at = datetime('now','-20 minutes') WHERE id = ?`, abierto.id);
+    assert.ok(releaseStaleClaims(5) >= 1);
+    assert.equal(get('SELECT claimed_by FROM orders WHERE id = ?', abierto.id).claimed_by, null);
+  });
+});
+
+describe('locales de muestra y locales de verdad', () => {
+  test('Maitre crea un local de piloto limpio, y los de muestra no cuentan para el MRR', async () => {
+    const { hashPassword } = await import('../server/auth.js');
+    const { insert, get } = await import('../server/db.js');
+    const correo = 'alta-op@maitre.test';
+    if (!get('SELECT id FROM users WHERE email = ?', correo)) {
+      insert('users', { venue_id: null, email: correo, password_hash: hashPassword('contrasena123'), name: 'Op', role: 'superadmin' });
+    }
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: correo, password: 'contrasena123' } });
+
+    const nuevo = await srv.request('/api/admin/venues', { method: 'POST', body: {
+      name: 'Bar de la Plaça', email: 'plaza@piloto.test', password: 'contrasena123', city: 'Sant Cugat', tables: 9,
+    } });
+    assert.equal(nuevo.status, 201);
+    assert.equal(nuevo.data.slug, 'bar-de-la-placa');
+    assert.equal(nuevo.data.is_pilot, 1);
+    assert.equal(nuevo.data.is_demo, 0);
+
+    // Limpio: sus mesas listas, cero pedidos inventados.
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: 'plaza@piloto.test', password: 'contrasena123' } });
+    const mesas = await srv.request('/api/tables');
+    assert.equal(mesas.data.tables.length, 9);
+    assert.ok(mesas.data.tables.every((t) => /^[A-Z2-9]{6}$/.test(t.qr_code)));
+    assert.equal((await srv.request('/api/orders?scope=all')).data.length, 0);
+
+    // Un local de muestra no suma al MRR del negocio.
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: correo, password: 'contrasena123' } });
+    await srv.request(`/api/admin/venues/${nuevo.data.id}`, { method: 'PATCH', body: { plan: 'servicio' } });
+    const conPago = (await srv.request('/api/admin/overview')).data.kpis.mrr_cents;
+    await srv.request(`/api/admin/venues/${nuevo.data.id}`, { method: 'PATCH', body: { is_demo: true } });
+    const sinDemo = (await srv.request('/api/admin/overview')).data.kpis.mrr_cents;
+    assert.equal(conPago - sinDemo, 3900, 'al marcarlo de muestra deja de contar');
   });
 });

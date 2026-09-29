@@ -34,7 +34,10 @@ router.patch('/', requireRole('manager'), (req, res) => {
   }
   if (req.body.features !== undefined) {
     const current = JSON.parse(req.venue.features || '{}');
-    patch.features = JSON.stringify({ ...current, ...req.body.features });
+    // Las funciones en preparación (beta_*) solo las abre Maitre desde su consola.
+    const entrantes = Object.fromEntries(
+      Object.entries(req.body.features || {}).filter(([k]) => !k.startsWith('beta_')));
+    patch.features = JSON.stringify({ ...current, ...entrantes });
   }
   if (req.body.payment_mode !== undefined) {
     if (!['venue', 'online_optional', 'online_required'].includes(req.body.payment_mode)) {

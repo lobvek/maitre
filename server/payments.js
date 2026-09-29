@@ -5,12 +5,14 @@
 // pasarela configurada (PAYMENTS_PROVIDER), funciona un proveedor de pruebas que abre una
 // pantalla de simulación: sirve para demostrar y probar el flujo completo, no cobra nada.
 import { token } from './utils.js';
+import { hasFeature } from './plans.js';
 
 export const provider = () => process.env.PAYMENTS_PROVIDER || 'sandbox';
 export const isSandbox = () => provider() === 'sandbox';
 
 /** ¿Puede este local cobrar online ahora mismo? */
 export function canChargeOnline(venue) {
+  if (!hasFeature(venue, 'payments')) return false;   // todavía en preparación
   if (venue.payment_mode === 'venue') return false;
   return isSandbox() || !!venue.payment_account;
 }

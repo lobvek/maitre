@@ -56,30 +56,35 @@ export function orderCode(seq) {
   return `${letters[seq % letters.length]}${String(seq).padStart(3, '0')}`;
 }
 
+/**
+ * Los 14 alérgenos de declaración obligatoria en la UE. Se muestran como
+ * etiqueta de texto con su abreviatura: más legible y más serio que un emoji.
+ */
 export const ALLERGENS = [
-  { id: 'gluten', label: 'Gluten', icon: '🌾' },
-  { id: 'crustaceans', label: 'Crustáceos', icon: '🦐' },
-  { id: 'eggs', label: 'Huevos', icon: '🥚' },
-  { id: 'fish', label: 'Pescado', icon: '🐟' },
-  { id: 'peanuts', label: 'Cacahuetes', icon: '🥜' },
-  { id: 'soy', label: 'Soja', icon: '🫘' },
-  { id: 'milk', label: 'Lácteos', icon: '🥛' },
-  { id: 'nuts', label: 'Frutos de cáscara', icon: '🌰' },
-  { id: 'celery', label: 'Apio', icon: '🥬' },
-  { id: 'mustard', label: 'Mostaza', icon: '🌭' },
-  { id: 'sesame', label: 'Sésamo', icon: '🫓' },
-  { id: 'sulphites', label: 'Sulfitos', icon: '🍷' },
-  { id: 'lupin', label: 'Altramuces', icon: '🌱' },
-  { id: 'molluscs', label: 'Moluscos', icon: '🦑' },
+  { id: 'gluten', label: 'Gluten', short: 'GLU' },
+  { id: 'crustaceans', label: 'Crustáceos', short: 'CRU' },
+  { id: 'eggs', label: 'Huevos', short: 'HUE' },
+  { id: 'fish', label: 'Pescado', short: 'PES' },
+  { id: 'peanuts', label: 'Cacahuetes', short: 'CAC' },
+  { id: 'soy', label: 'Soja', short: 'SOJ' },
+  { id: 'milk', label: 'Lácteos', short: 'LAC' },
+  { id: 'nuts', label: 'Frutos de cáscara', short: 'FRU' },
+  { id: 'celery', label: 'Apio', short: 'API' },
+  { id: 'mustard', label: 'Mostaza', short: 'MOS' },
+  { id: 'sesame', label: 'Sésamo', short: 'SES' },
+  { id: 'sulphites', label: 'Sulfitos', short: 'SUL' },
+  { id: 'lupin', label: 'Altramuces', short: 'ALT' },
+  { id: 'molluscs', label: 'Moluscos', short: 'MOL' },
 ];
 
+/** Etiquetas de dieta. `icon` es el nombre de un icono del juego propio. */
 export const TAGS = [
-  { id: 'vegetarian', label: 'Vegetariano', icon: '🥗' },
-  { id: 'vegan', label: 'Vegano', icon: '🌱' },
-  { id: 'gluten_free', label: 'Sin gluten', icon: '🚫🌾' },
-  { id: 'spicy', label: 'Picante', icon: '🌶️' },
-  { id: 'house', label: 'De la casa', icon: '⭐' },
-  { id: 'new', label: 'Novedad', icon: '🆕' },
+  { id: 'vegetarian', label: 'Vegetariano', icon: 'leaf' },
+  { id: 'vegan', label: 'Vegano', icon: 'leaf' },
+  { id: 'gluten_free', label: 'Sin gluten', icon: 'wheat' },
+  { id: 'spicy', label: 'Picante', icon: 'flame' },
+  { id: 'house', label: 'De la casa', icon: 'star' },
+  { id: 'new', label: 'Novedad', icon: 'sparkle' },
 ];
 
 export function ok(res, data) { return res.json(data ?? { ok: true }); }

@@ -1,17 +1,18 @@
 // Panel del establecimiento: enrutador por hash y carga de vistas.
-import { api, $, $$, toast, el } from '/js/core.js';
+import { api, $, $$, toast, el, icon, loader } from '/js/core.js';
+import { transicion, contarTodo } from '/js/motion.js';
 
 export const app = { me: null, venue: null, user: null };
 
 const ROUTES = [
-  { id: 'inicio', label: 'Inicio', ico: '◆', roles: ['staff', 'manager', 'owner'] },
-  { id: 'carta', label: 'Carta', ico: '✎', roles: ['staff', 'manager', 'owner'] },
-  { id: 'mesas', label: 'Mesas y QR', ico: '▦', roles: ['staff', 'manager', 'owner'] },
-  { id: 'pedidos', label: 'Pedidos', ico: '≡', roles: ['staff', 'manager', 'owner'] },
-  { id: 'analitica', label: 'Analítica', ico: '↗', roles: ['manager', 'owner'], feature: 'analytics' },
-  { id: 'equipo', label: 'Equipo', ico: '☺', roles: ['owner'] },
-  { id: 'ajustes', label: 'Ajustes', ico: '⚙', roles: ['manager', 'owner'] },
-  { id: 'facturacion', label: 'Plan y facturas', ico: '€', roles: ['owner'] },
+  { id: 'inicio', label: 'Inicio', ico: 'home', roles: ['staff', 'manager', 'owner'] },
+  { id: 'carta', label: 'Carta', ico: 'menu', roles: ['staff', 'manager', 'owner'] },
+  { id: 'mesas', label: 'Mesas y QR', ico: 'grid', roles: ['staff', 'manager', 'owner'] },
+  { id: 'pedidos', label: 'Pedidos', ico: 'list', roles: ['staff', 'manager', 'owner'] },
+  { id: 'analitica', label: 'Analítica', ico: 'chart', roles: ['manager', 'owner'], feature: 'analytics' },
+  { id: 'equipo', label: 'Equipo', ico: 'users', roles: ['owner'] },
+  { id: 'ajustes', label: 'Ajustes', ico: 'settings', roles: ['manager', 'owner'] },
+  { id: 'facturacion', label: 'Plan y facturas', ico: 'card', roles: ['owner'] },
 ];
 
 const RANK = { staff: 1, manager: 2, owner: 3, superadmin: 4 };
@@ -27,10 +28,10 @@ export async function reloadMe() {
 
 function paintChrome() {
   $('#venue-name').textContent = app.venue?.name || '';
-  $('#who').innerHTML = `<strong>${app.user.name}</strong><br>${app.user.email}`;
+  $('#who').innerHTML = `<strong>${app.user.name}</strong><span>${app.user.email}</span>`;
   $('#links').innerHTML = ROUTES
     .filter((r) => r.roles.includes(app.user.role))
-    .map((r) => `<a href="#/${r.id}" data-route="${r.id}"><span class="ico">${r.ico}</span>${r.label}
+    .map((r) => `<a href="#/${r.id}" data-route="${r.id}">${icon(r.ico)}<span>${r.label}</span>
       ${r.feature && !hasFeature(r.feature) ? '<span class="tag brand" style="margin-left:auto">Servicio</span>' : ''}</a>`).join('');
 
   const plan = app.venue?.effective_plan;
@@ -49,11 +50,14 @@ async function route() {
   $('#title').textContent = def.label;
   $('#side').classList.remove('open');
   const view = $('#view');
-  view.innerHTML = '<div class="spin" style="margin:60px auto"></div>';
+  view.innerHTML = loader();
   try {
     const mod = await import(`/js/views/${def.id}.js`);
-    view.innerHTML = '';
-    await mod.render(view);
+    const pintar = document.createElement('div');
+    await mod.render(pintar);
+    // La sección entra con transición en vez de aparecer de golpe.
+    transicion(() => { view.innerHTML = ''; view.append(...pintar.childNodes); });
+    contarTodo(view);
   } catch (err) {
     console.error(err);
     view.innerHTML = `<div class="notice err">No se ha podido cargar esta sección: ${err.message}</div>`;
@@ -68,6 +72,8 @@ async function boot() {
   addEventListener('hashchange', route);
   $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/entrar'; };
   $('#burger').onclick = () => $('#side').classList.toggle('open');
+  $('#burger').innerHTML = icon('burger');
+  $('#logout').innerHTML = icon('logout') + ' Salir';
   await route();
 }
 

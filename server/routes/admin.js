@@ -1,11 +1,13 @@
 // Panel del operador de Maitre (superadmin): cartera de locales, MRR y seguimiento
 // de los hitos del plan de empresa (12 locales en el mes 6, 35 en el 12, 70 en el 18).
 import { Router } from 'express';
-import { all, get, update, insert, run, audit } from '../db.js';
-import { requireAuth, requireSuperadmin } from '../auth.js';
+import { all, get, update, insert, run, audit, tx } from '../db.js';
+import { requireAuth, requireSuperadmin, hashPassword } from '../auth.js';
+import { slugify, token, addDays } from '../utils.js';
+import { makeQrCode } from '../db.js';
 import { PLANS, effectivePlan } from '../plans.js';
 import { pilotReport } from '../pilot.js';
-import { bad, ok, addDays, nowSql } from '../utils.js';
+import { bad, ok, nowSql } from '../utils.js';
 
 export const router = Router();
 router.use(requireAuth, requireSuperadmin);
@@ -19,19 +21,22 @@ const BREAKEVEN_VENUES = 45;
 
 router.get('/overview', (_req, res) => {
   const venues = all('SELECT * FROM venues ORDER BY id');
-  let mrr = 0, paying = 0, trials = 0, pilots = 0;
+  let mrr = 0, paying = 0, trials = 0, pilots = 0, demos = 0;
   for (const v of venues) {
     const plan = effectivePlan(v);
     if (v.status !== 'active') continue;
-    if (v.plan === 'trial') trials++;
-    if (v.is_pilot) pilots++;
-    if (['mesa', 'servicio', 'local', 'founders'].includes(v.plan)) { mrr += PLANS[v.plan].price_cents; paying++; }
+    if (v.is_demo) { demos++; }
+    if (v.plan === 'trial' && !v.is_demo) trials++;
+    if (v.is_pilot && !v.is_demo) pilots++;
+    if (v.is_demo) continue;
+    if (['mesa', 'servicio', 'founders'].includes(v.plan)) { mrr += PLANS[v.plan].price_cents; paying++; }
   }
   const activity = get(`SELECT COUNT(*) AS orders, COALESCE(SUM(total_cents),0) AS gmv_cents
     FROM orders WHERE date(created_at) >= date('now','-30 day')`);
   res.json({
     kpis: {
-      venues: venues.length,
+      venues: venues.filter((v) => !v.is_demo).length,
+      demos,
       paying, trials, pilots,
       mrr_cents: mrr,
       arr_cents: mrr * 12,
@@ -65,7 +70,13 @@ router.patch('/venues/:id', (req, res) => {
   const v = get('SELECT * FROM venues WHERE id = ?', Number(req.params.id));
   if (!v) return bad(res, 'Local no encontrado.', 404);
   const patch = {};
-  if (req.body.plan && ['trial', 'mesa', 'servicio', 'local', 'founders', 'paused'].includes(req.body.plan)) {
+  if (req.body.is_demo !== undefined) patch.is_demo = req.body.is_demo ? 1 : 0;
+  if (req.body.beta !== undefined) {
+    const f = JSON.parse(v.features || '{}');
+    for (const [k, on] of Object.entries(req.body.beta)) f[`beta_${k}`] = !!on;
+    patch.features = JSON.stringify(f);
+  }
+  if (req.body.plan && ['trial', 'mesa', 'servicio', 'founders', 'paused'].includes(req.body.plan)) {
     patch.plan = req.body.plan;
     patch.plan_since = nowSql();
     // Fundadores: plan Servicio a 19 € durante 24 meses; después pasa al precio público.
@@ -81,6 +92,44 @@ router.patch('/venues/:id', (req, res) => {
   update('venues', v.id, patch);
   audit(v.id, req.user.id, 'admin.venue_updated', 'venue', v.id, patch);
   res.json(get('SELECT * FROM venues WHERE id = ?', v.id));
+});
+
+/**
+ * POST /api/admin/venues — da de alta un local de verdad para un piloto.
+ * Limpio: sin datos de muestra, con su dueño y sus mesas listas.
+ */
+router.post('/venues', (req, res) => {
+  const { name, email, password, city = '', address = '', tables = 12, owner_name = '' } = req.body || {};
+  if (!name || !email || !password) return bad(res, 'Hacen falta nombre del local, email y contraseña.');
+  if (String(password).length < 8) return bad(res, 'La contraseña debe tener al menos 8 caracteres.');
+  const mail = String(email).trim().toLowerCase();
+  if (get('SELECT id FROM users WHERE email = ?', mail)) return bad(res, 'Ya existe una cuenta con ese email.', 409);
+
+  let slug = slugify(name), n = 1;
+  while (get('SELECT id FROM venues WHERE slug = ?', slug)) slug = `${slugify(name)}-${++n}`;
+
+  const out = tx(() => {
+    const venueId = insert('venues', {
+      slug, name: String(name).trim(), city: String(city).trim(), address: String(address).trim(),
+      email: mail, plan: 'trial', plan_since: nowSql(), trial_ends_at: addDays(30),
+      is_pilot: 1, is_demo: 0, onboarding_step: 1,
+      features: JSON.stringify({ calls: true, orders: true, notes: true }),
+      pilot: JSON.stringify({ start: new Date().toISOString().slice(0, 10), decision_date: addDays(30).slice(0, 10) }),
+    });
+    insert('users', {
+      venue_id: venueId, email: mail, password_hash: hashPassword(password),
+      name: String(owner_name).trim() || 'Responsable', role: 'owner',
+    });
+    const zona = insert('zones', { venue_id: venueId, name: 'Sala', sort: 0 });
+    const cuantas = Math.min(Math.max(parseInt(tables, 10) || 12, 1), 80);
+    for (let i = 1; i <= cuantas; i++) {
+      insert('tables', { venue_id: venueId, zone_id: zona, name: String(i), seats: 2,
+        token: token(6), sort: i, qr_code: makeQrCode() });
+    }
+    audit(venueId, req.user.id, 'admin.venue_created', 'venue', venueId, { slug, piloto: true });
+    return venueId;
+  });
+  res.status(201).json(get('SELECT * FROM venues WHERE id = ?', out));
 });
 
 /** Cuadro de mando del piloto (tabla 10 y 12 del estudio): uso, valor y calidad. */

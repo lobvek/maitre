@@ -73,7 +73,7 @@ export async function render(root) {
         <hr>
         <h3 style="margin-top:0">Cómo se entera el personal</h3>
         <p class="muted" style="font-size:13.5px">Los avisos y pedidos entran en la pantalla de sala. Si no tenéis una tablet en barra,
-        que cada camarero active <strong>📳 Avisos</strong> en la pantalla de sala desde su móvil: le suena y vibra aunque
+        que cada camarero active <strong><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-vibrate"/></svg> Avisos</strong> en la pantalla de sala desde su móvil: le suena y vibra aunque
         esté bloqueado. En iPhone hay que añadir la sala a la pantalla de inicio primero (Compartir → Añadir a inicio).</p>
         <div class="notice ${push.subscriptions ? 'ok' : ''}" style="margin-bottom:12px">
           ${push.subscriptions ? `${push.subscriptions} móvil${push.subscriptions === 1 ? '' : 'es'} con avisos activos.` : 'Ningún móvil con avisos activos todavía.'}

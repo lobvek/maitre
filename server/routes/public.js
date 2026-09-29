@@ -138,7 +138,7 @@ router.get('/:slug/:token', resolve, (req, res) => {
       table_open: req.pubTable ? req.pubTable.status === 'occupied' : false,
     },
     payment: {
-      online: canChargeOnline(venue) && hasFeature(venue, 'payments'),
+      online: canChargeOnline(venue),
       required: venue.payment_mode === 'online_required' && canChargeOnline(venue),
       sandbox: isSandbox(),
     },

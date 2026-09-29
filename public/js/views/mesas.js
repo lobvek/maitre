@@ -50,7 +50,7 @@ function paint() {
           <div class="row" style="margin-top:10px">
             <a class="btn sm grow" href="${esc(t.url)}" target="_blank">Ver</a>
             <a class="btn sm" href="/api/tables/${t.id}/qr.png?size=1200" download="qr-mesa-${esc(t.name)}.png">PNG</a>
-            ${can('manager') ? `<button class="btn ghost sm" data-edit="${t.id}">⋯</button>` : ''}
+            ${can('manager') ? `<button class="btn ghost sm" data-edit="${t.id}"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-settings"/></svg></button>` : ''}
           </div>
         </div>`).join('')}
       </div>

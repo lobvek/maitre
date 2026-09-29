@@ -1,14 +1,19 @@
 // Planes comerciales y control de funciones. Precios sin IVA (hipótesis para test A/B).
-// Reparto acordado el 13-09-2026: el pedido desde la mesa y las variantes van en Mesa;
-// la analítica, el equipo con roles y la sala avanzada van en Servicio.
+// Reparto acordado el 13-09-2026 y revisado el 28-09: el pedido desde la mesa y las
+// variantes van en Mesa; la sala completa, los roles y la analítica van en Servicio.
+//
+// Solo se vende lo que funciona. La integración nativa con el TPV, el cobro con tarjeta
+// y el multi-local todavía no existen, así que no forman parte de ningún plan: están en
+// la hoja de ruta. El código sigue ahí, detrás de ROADMAP, para el día que se activen.
 // Cambiar un plan = tocar este fichero; el resto de la app lee de aquí.
 
 // Mesa: la carta, el pedido y la llamada. Recibe los pedidos en una pantalla de sala sencilla.
 const MESA = ['menu', 'qr', 'calls', 'orders', 'modifiers', 'staff_basic'];
-// Servicio: la sala completa — barra/cocina, comandas, agotados en un toque, mesas, roles, analítica.
-const SERVICIO = [...MESA, 'kds', 'upsell', 'staff', 'tables', 'export', 'analytics'];
-// Local: todo el local conectado — TPV, pago con el móvil, reseñas y varios locales.
-const LOCAL = [...SERVICIO, 'integrations', 'payments', 'reviews', 'multi_venue'];
+// Servicio: la sala completa — barra/cocina, comandas, agotados, mesas, roles, analítica y reseñas.
+const SERVICIO = [...MESA, 'kds', 'upsell', 'staff', 'tables', 'export', 'analytics', 'reviews'];
+
+/** Construido pero aún no vendible. Se activa por local desde la consola de Maitre. */
+export const ROADMAP = ['integrations', 'payments', 'multi_venue'];
 
 export const PLANS = {
   trial: {
@@ -36,14 +41,6 @@ export const PLANS = {
     features: SERVICIO,
     highlight: true,
   },
-  local: {
-    id: 'local',
-    name: 'Local',
-    price_cents: 6900,
-    tagline: 'Integración con tu TPV, pago con el móvil, reseñas y varios locales',
-    max_tables: 200,
-    features: LOCAL,
-  },
   founders: {
     id: 'founders',
     name: 'Fundadores',
@@ -65,7 +62,7 @@ export const PLANS = {
 };
 
 /** Planes que un local puede contratar por sí mismo. */
-export const SELF_SERVICE = ['mesa', 'servicio', 'local'];
+export const SELF_SERVICE = ['mesa', 'servicio'];
 
 export const FEATURE_LABELS = {
   menu: 'Carta digital',
@@ -80,9 +77,10 @@ export const FEATURE_LABELS = {
   tables: 'Cambio y unión de mesas',
   export: 'Exportaciones',
   analytics: 'Analítica',
+  reviews: 'Reseñas y opt-in',
+  // Hoja de ruta, fuera de los planes por ahora:
   integrations: 'Integración con TPV',
   payments: 'Pago con el móvil',
-  reviews: 'Reseñas y opt-in',
   multi_venue: 'Varios locales',
 };
 
@@ -97,10 +95,15 @@ export function effectivePlan(venue) {
   if (venue.status !== 'active') return PLANS.paused;
   if (venue.plan === 'trial') return expired(venue.trial_ends_at) ? PLANS.mesa : PLANS.trial;
   if (venue.plan === 'founders') return expired(venue.plan_until) ? PLANS.servicio : PLANS.founders;
+  if (venue.plan === 'local') return PLANS.servicio;   // plan retirado
   return PLANS[venue.plan] || PLANS.mesa;
 }
 
 export function hasFeature(venue, feature) {
+  if (ROADMAP.includes(feature)) {
+    // Solo si Maitre lo ha abierto expresamente para ese local (pruebas internas).
+    try { return !!JSON.parse(venue?.features || '{}')[`beta_${feature}`]; } catch { return false; }
+  }
   return effectivePlan(venue).features.includes(feature);
 }
 

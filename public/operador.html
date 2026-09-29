@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Operador · Maitre</title>
+<link rel="icon" href="/assets/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/figtree-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#646B41">
 <link rel="stylesheet" href="/css/base.css">
 <style>
   .topbar { display: flex; align-items: center; gap: 14px; padding: 14px 26px; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -27,9 +32,9 @@
   </div>
   <button class="btn sm" id="logout">Salir</button>
 </div>
-<div class="wrapper" id="view"><div class="spin" style="margin:60px auto"></div></div>
+<div class="wrapper" id="view"></div>
 <script type="module">
-import { api, money, esc, el, $, $$, toast, fmtDate, num, chart, modal } from '/js/core.js';
+import { api, money, esc, el, $, $$, toast, fmtDate, num, chart, modal, icon, loader } from '/js/core.js';
 
 let tab = 'cartera';
 $$('.tabs button').forEach((b) => b.onclick = () => {
@@ -40,7 +45,7 @@ $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'PO
 
 async function paint() {
   const view = $('#view');
-  view.innerHTML = '<div class="spin" style="margin:60px auto"></div>';
+  view.innerHTML = loader();
   if (tab === 'cartera') return cartera(view);
   if (tab === 'locales') return locales(view);
   if (tab === 'pilotos') return pilotos(view);
@@ -55,7 +60,8 @@ async function cartera(view) {
   view.innerHTML = `
     <div class="grid g4" style="margin-bottom:22px">
       <div class="kpi"><div class="k">MRR</div><div class="v">${money(k.mrr_cents)}</div><div class="d">ARR ${money(k.arr_cents)}</div></div>
-      <div class="kpi"><div class="k">Locales de pago</div><div class="v">${k.paying}</div><div class="d">${k.trials} en prueba · ${k.pilots} pilotos</div></div>
+      <div class="kpi"><div class="k">Locales de pago</div><div class="v">${k.paying}</div>
+        <div class="d">${k.trials} en piloto${k.demos ? ` · ${k.demos} de muestra` : ''}</div></div>
       <div class="kpi"><div class="k">Ingreso medio</div><div class="v">${money(k.arpa_cents)}</div><div class="d">por local y mes</div></div>
       <div class="kpi"><div class="k">Actividad 30 días</div><div class="v">${num(k.orders_30d)}</div><div class="d">pedidos · ${money(k.gmv_30d_cents)} servidos</div></div>
     </div>
@@ -77,26 +83,56 @@ async function cartera(view) {
         <div class="muted" style="font-size:12px;margin-left:74px">Punto de equilibrio operativo estimado</div>
       </div>
       <div class="card"><h3>Altas por mes</h3>
-        ${signups.length ? chart(signups, { kind: 'bar', height: 200, color: 'var(--brand)' }) : '<div class="empty">Sin datos.</div>'}</div>
+        ${signups.length ? chart(signups, { kind: 'bar', height: 200, multicolor: true }) : '<div class="empty">Sin datos.</div>'}</div>
     </div>`;
 }
 
 async function locales(view) {
   const rows = await api('/api/admin/venues');
   view.innerHTML = `
-    <div class="row" style="margin-bottom:14px"><input id="q" placeholder="Buscar local…" style="max-width:320px"></div>
+    <div class="spread" style="margin-bottom:14px">
+      <input id="q" placeholder="Buscar local…" style="max-width:320px">
+      <button class="btn primary sm" id="nuevo">+ Local para un piloto</button>
+    </div>
     <div class="card" style="padding:0"><table>
       <thead><tr><th>Local</th><th>Plan</th><th>Mesas</th><th>Carta</th><th>Pedidos 7d</th><th>Último pedido</th><th>MRR</th><th></th></tr></thead>
       <tbody>${rows.map((v) => `<tr>
         <td><strong>${esc(v.name)}</strong>${v.is_pilot ? ' <span class="tag amber">piloto</span>' : ''}
           <div class="muted" style="font-size:12.5px">${esc(v.city || '')} · ${esc(v.owner_email || '')}</div></td>
-        <td><span class="tag ${['servicio', 'local'].includes(v.effective_plan) ? 'green' : v.effective_plan === 'founders' ? 'brand' : v.effective_plan === 'trial' ? 'amber' : ''}">${esc(v.effective_plan)}</span>
+        <td><span class="tag ${v.effective_plan === 'servicio' ? 'green' : v.effective_plan === 'founders' ? 'brand' : v.effective_plan === 'trial' ? 'amber' : ''}">${esc(v.effective_plan)}</span>
+          ${v.is_demo ? '<span class="tag">demo</span>' : ''}
           ${v.status !== 'active' ? `<span class="tag red">${esc(v.status)}</span>` : ''}</td>
         <td class="num">${v.tables}</td><td class="num">${v.items}</td><td class="num">${v.orders_7d}</td>
         <td class="muted">${v.last_order_at ? fmtDate(v.last_order_at) : '—'}</td>
         <td class="num">${money(v.mrr_cents)}</td>
         <td class="right"><button class="btn sm" data-v="${v.id}">Gestionar</button></td>
       </tr>`).join('')}</tbody></table></div>`;
+
+  $('#nuevo').onclick = async () => {
+    const body = el('div', { html: `
+      <p class="muted" style="font-size:13.5px;margin-top:0">Crea el local de verdad, limpio y sin datos de muestra.
+      Arranca con 30 días de piloto y el plan Servicio completo.</p>
+      <div class="field"><label>Nombre del local</label><input id="n" placeholder="Bar de la Plaça" autofocus></div>
+      <div class="field-row">
+        <div class="field"><label>Responsable</label><input id="o" placeholder="Nombre de quien manda"></div>
+        <div class="field"><label>Población</label><input id="c" placeholder="Sant Cugat"></div>
+      </div>
+      <div class="field"><label>Dirección</label><input id="d" placeholder="Carrer Major 12"></div>
+      <div class="field-row">
+        <div class="field"><label>Email de acceso</label><input id="e" type="email"></div>
+        <div class="field"><label>Nº de mesas</label><input id="t" type="number" min="1" max="80" value="14"></div>
+      </div>
+      <div class="field"><label>Contraseña provisional</label><input id="p" minlength="8" value="maitre${new Date().getFullYear()}">
+        <div class="help">Se la das al dueño y que la cambie desde Ajustes.</div></div>` });
+    const creado = await modal({ title: 'Nuevo local para piloto', body, save: 'Crear local',
+      onSave: (r) => api('/api/admin/venues', { method: 'POST', body: {
+        name: r.querySelector('#n').value, owner_name: r.querySelector('#o').value,
+        city: r.querySelector('#c').value, address: r.querySelector('#d').value,
+        email: r.querySelector('#e').value, password: r.querySelector('#p').value,
+        tables: r.querySelector('#t').value,
+      } }) });
+    if (creado) { toast(`${creado.name} creado. Ya puedes cargarle la carta.`, 'ok'); paint(); }
+  };
 
   $('#q').oninput = (e) => {
     const q = e.target.value.toLowerCase();
@@ -106,7 +142,7 @@ async function locales(view) {
     const v = rows.find((x) => x.id === Number(b.dataset.v));
     const body = el('div', { html: `
       <div class="field"><label>Plan</label><select id="plan">
-        ${[['trial', 'Piloto (30 días)'], ['mesa', 'Mesa · 19 €'], ['servicio', 'Servicio · 39 €'], ['local', 'Local · 69 €'],
+        ${[['trial', 'Piloto (30 días)'], ['mesa', 'Mesa · 19 €'], ['servicio', 'Servicio · 39 €'],
            ['founders', 'Fundadores · 19 € durante 24 meses'], ['paused', 'En pausa']]
           .map(([p, n]) => `<option value="${p}" ${v.plan === p ? 'selected' : ''}>${n}</option>`).join('')}
       </select></div>
@@ -114,11 +150,18 @@ async function locales(view) {
         ${['active', 'suspended', 'churned'].map((s) => `<option value="${s}" ${v.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select></div>
       <label class="row"><input type="checkbox" id="pilot" ${v.is_pilot ? 'checked' : ''}> <span>Marcar como local piloto</span></label>
+      <label class="row"><input type="checkbox" id="demo" ${v.is_demo ? 'checked' : ''}> <span>Local de muestra (no cuenta para el MRR)</span></label>
+      <fieldset style="margin-top:14px"><legend>Abrir funciones en preparación</legend>
+        ${[['integrations', 'Conexión con TPV'], ['payments', 'Cobro con el móvil'], ['multi_venue', 'Varios locales']]
+          .map(([k, n]) => `<label class="row" style="font-weight:400"><input type="checkbox" data-beta="${k}"> <span>${n}</span></label>`).join('')}
+        <div class="help">Solo para pruebas internas. No se venden todavía.</div></fieldset>
       <div class="field" style="margin-top:14px"><label>Ampliar prueba (días)</label><input id="ext" type="number" min="0" max="120" placeholder="0"></div>
       <div class="fse">Carta pública: <a href="/m/${esc(v.slug)}" target="_blank">/m/${esc(v.slug)}</a> · alta ${fmtDate(v.created_at)}</div>` });
     const saved = await modal({ title: v.name, body, onSave: (r) => api(`/api/admin/venues/${v.id}`, { method: 'PATCH', body: {
       plan: r.querySelector('#plan').value, status: r.querySelector('#status').value,
       is_pilot: r.querySelector('#pilot').checked,
+      is_demo: r.querySelector('#demo').checked,
+      beta: Object.fromEntries([...r.querySelectorAll('[data-beta]')].map((c) => [c.dataset.beta, c.checked])),
       extend_trial_days: Number(r.querySelector('#ext').value) || undefined,
     } }) });
     if (saved) { toast('Local actualizado', 'ok'); paint(); }
@@ -128,7 +171,7 @@ async function locales(view) {
 /** Pilotos como experimento: objetivo, línea base, revisión semanal y decisión al día 30. */
 async function pilotos(view) {
   const rows = (await api('/api/admin/venues')).filter((v) => v.is_pilot || v.plan === 'trial');
-  if (!rows.length) { view.innerHTML = '<div class="empty"><span class="ico">🧪</span>Ningún local marcado como piloto.</div>'; return; }
+  if (!rows.length) { view.innerHTML = '<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-coffee"/></svg></span>Ningún local marcado como piloto.</div>'; return; }
   const reports = await Promise.all(rows.map((v) => api(`/api/admin/venues/${v.id}/pilot`)));
   const OBJ = { tiempo: 'Reducir esperas', ticket: 'Subir el ticket medio', carga: 'Aliviar la carga de sala' };
 
@@ -145,7 +188,7 @@ async function pilotos(view) {
           ${r.pilot.start} → ${r.pilot.decision_date} · ${r.pilot.days_left ? `${r.pilot.days_left} días para decidir` : 'fecha de decisión pasada'}
           ${r.pilot.deposit_cents ? ` · depósito ${money(r.pilot.deposit_cents)}` : ''}</div>
         ${r.checks.map((c) => `<div class="spread" style="padding:6px 0;border-top:1px solid var(--line-2);font-size:13.5px">
-          <span>${c.ok ? '✅' : '⬜️'} ${esc(c.label)}</span><strong>${esc(c.value)}</strong></div>`).join('')}
+          <span>${c.ok ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg>' : ''} ${esc(c.label)}</span><strong>${esc(c.value)}</strong></div>`).join('')}
         <div class="grid g3" style="margin-top:14px;gap:10px">
           <div class="kpi" style="padding:10px 12px"><div class="k">Mesas que escanean</div><div class="v" style="font-size:1.3rem">${r.usage.scan_pct}%</div></div>
           <div class="kpi" style="padding:10px 12px"><div class="k">Aceptar pedido</div><div class="v" style="font-size:1.3rem">${r.value.accept_minutes ?? '—'} min</div></div>

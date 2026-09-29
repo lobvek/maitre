@@ -1,5 +1,6 @@
 // Analítica del local (plan Pro): ventas, embudo del QR, horas punta y márgenes.
-import { api, money, esc, el, $, $$, chart, num } from '/js/core.js';
+import { api, money, esc, el, $, $$, chart, num, icon, loader } from '/js/core.js';
+import { contarTodo } from '/js/motion.js';
 import { app, hasFeature } from '/js/app.js';
 
 export async function render(root) {
@@ -19,7 +20,7 @@ export async function render(root) {
       <div><label>Hasta</label><input type="date" id="to" value="${to}"></div>
       <div style="align-self:flex-end"><button class="btn primary" id="apply">Actualizar</button></div>
     </div>
-    <div id="out"><div class="spin" style="margin:40px auto"></div></div>`;
+    <div id="out">${loader()}</div>`;
 
   const load = async () => {
     const q = `from=${$('#from').value}&to=${$('#to').value}`;
@@ -35,10 +36,11 @@ export async function render(root) {
     const porQr = totalPedidos ? Math.round((d.by_channel.find((c) => c.channel === 'qr')?.orders || 0) / totalPedidos * 100) : 0;
 
     $('#out').innerHTML = `
-      <div class="grid g4" style="margin-bottom:20px">
-        <div class="kpi"><div class="k">Ventas totales</div><div class="v">${money(k.revenue_cents, cur)}</div>
+      <div class="grid g4 stagger" style="margin-bottom:20px">
+        <div class="kpi"><div class="k">Ventas totales</div>
+          <div class="v" data-count="${k.revenue_cents}" data-count-currency="${cur}">${money(k.revenue_cents, cur)}</div>
           <div class="d">IVA incluido: ${money(k.tax_cents, cur)}</div></div>
-        <div class="kpi"><div class="k">Pedidos</div><div class="v">${num(k.orders)}</div>
+        <div class="kpi"><div class="k">Pedidos</div><div class="v" data-count="${k.orders}">${num(k.orders)}</div>
           <div class="d">${k.cancelled} cancelados</div></div>
         <div class="kpi"><div class="k">Ticket medio</div><div class="v">${money(k.avg_ticket_cents, cur)}</div></div>
         <div class="kpi"><div class="k">Pedidos por QR</div><div class="v">${porQr}%</div>
@@ -68,7 +70,7 @@ export async function render(root) {
 
       <div class="grid g2" style="margin-bottom:20px">
         <div class="card"><h3>Horas punta</h3>
-          ${chart(hours, { kind: 'bar', height: 180, color: 'var(--green)', format: (v) => Math.round(v) })}
+          ${chart(hours, { kind: 'bar', height: 180, color: 'var(--c1)', format: (v) => Math.round(v) })}
           <div class="muted" style="font-size:12.5px">Pedidos por hora del día.</div></div>
         <div class="card"><h3>Tiempos de servicio</h3>
           <table><tbody>
@@ -115,6 +117,7 @@ export async function render(root) {
         }).join('') || '<tr><td colspan="6" class="muted">Sin ventas en el periodo.</td></tr>'}</tbody></table></div>
       </div>`;
 
+    contarTodo($('#out'));
     const bloque = $('#avanzada');
     $('#toggle-avanzada').onclick = (e) => {
       bloque.classList.toggle('hidden');

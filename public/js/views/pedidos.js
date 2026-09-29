@@ -1,5 +1,6 @@
 // Historial de pedidos con filtros y exportación.
 import { api, money, esc, el, $, $$, fmtDate, toast, modal } from '/js/core.js';
+import { skeletonFilas, contarTodo } from '/js/motion.js';
 import { app, can, hasFeature } from '/js/app.js';
 
 const LABEL = { new: ['amber', 'Nuevo'], accepted: ['blue', 'Aceptado'], preparing: ['blue', 'Preparando'],
@@ -27,12 +28,13 @@ export async function render(root) {
     <div id="list"></div>`;
 
   const load = async () => {
+    $('#list').innerHTML = skeletonFilas(6, 5);
     const q = new URLSearchParams({ scope: 'all', limit: '300' });
     ['from', 'to', 'status'].forEach((k) => { const v = $('#' + k).value; if (v) q.set(k, v); });
     const orders = await api('/api/orders?' + q);
     const revenue = orders.filter((o) => ['served', 'paid'].includes(o.status)).reduce((n, o) => n + o.total_cents, 0);
     $('#list').innerHTML = orders.length ? `
-      <div class="grid g4" style="margin-bottom:16px">
+      <div class="grid g4 stagger" style="margin-bottom:16px">
         <div class="kpi"><div class="k">Pedidos</div><div class="v">${orders.length}</div></div>
         <div class="kpi"><div class="k">Facturado</div><div class="v">${money(revenue, app.venue.currency)}</div></div>
         <div class="kpi"><div class="k">Ticket medio</div><div class="v">${money(orders.length ? revenue / orders.length : 0, app.venue.currency)}</div></div>
@@ -49,6 +51,7 @@ export async function render(root) {
           <td class="num">${money(o.total_cents, app.venue.currency)}</td></tr>`).join('')}
         </tbody></table></div>`
       : '<div class="empty"><span class="ico">≡</span>No hay pedidos en ese periodo.</div>';
+    contarTodo($('#list'));
     $$('[data-o]').forEach((tr) => tr.onclick = () => detail(orders.find((o) => o.id === Number(tr.dataset.o))));
   };
 
@@ -65,7 +68,7 @@ function detail(o) {
     body: el('div', { html: `
       <table><tbody>${o.items.map((li) => `<tr><td>${li.qty} × ${esc(li.name)}
         ${li.options?.length ? `<div class="muted" style="font-size:12.5px">${esc(li.options.map((x) => x.name).join(', '))}</div>` : ''}
-        ${li.note ? `<div class="muted" style="font-size:12.5px">✎ ${esc(li.note)}</div>` : ''}</td>
+        ${li.note ? `<div class="muted" style="font-size:12.5px"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-note"/></svg> ${esc(li.note)}</div>` : ''}</td>
         <td class="num">${money(li.line_total_cents, app.venue.currency)}</td></tr>`).join('')}
         <tr><td class="muted">Base imponible</td><td class="num">${money(o.subtotal_cents, app.venue.currency)}</td></tr>
         <tr><td class="muted">IVA</td><td class="num">${money(o.tax_cents, app.venue.currency)}</td></tr>

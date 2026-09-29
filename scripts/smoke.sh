@@ -53,18 +53,16 @@ step "7. Sala sirve el pedido" "$(curl -sf -b "$JAR" "$API/api/orders/$OID" | j 
 CLOSE=$(curl -sf -b "$JAR" -X POST "$API/api/orders/table/$TABLE_ID/close" -H 'content-type: application/json' -d '{"payment_method":"card"}')
 step "8. Mesa cobrada" "$(echo "$CLOSE" | j "str(d['charged_cents']/100) + ' € en ' + str(d['orders']) + ' pedido(s)'")"
 
-curl -sf -b "$JAR" -X POST "$API/api/billing/plan" -H 'content-type: application/json' -d '{"plan":"pro"}' > /dev/null
-step "9. Plan Pro contratado" "$(curl -sf -b "$JAR" "$API/api/analytics/summary" | j "'ticket medio ' + str(d['kpis']['avg_ticket_cents']/100) + ' €'")"
+curl -sf -b "$JAR" -X POST "$API/api/billing/plan" -H 'content-type: application/json' -d '{"plan":"servicio"}' > /dev/null
+step "9. Plan Servicio contratado" "$(curl -sf -b "$JAR" "$API/api/analytics/summary" | j "'ticket medio ' + str(d['kpis']['avg_ticket_cents']/100) + ' EUR'")"
 
-curl -sf -b "$JAR" -X PATCH "$API/api/venue" -H 'content-type: application/json' -d '{"payment_mode":"online_required"}' > /dev/null
-PREPAGO=$(curl -sf -X POST "$API/api/public/$SLUG/$TOKEN/order" -H 'content-type: application/json' \
-  -d "{\"lines\":[{\"item_id\":$ITEM,\"qty\":1}],\"session_id\":\"$SESSION\"}")
-PID=$(echo "$PREPAGO" | j "d['id']")
-step "10. Pedido con cobro previo" "$(echo "$PREPAGO" | j "d['code'] + ' · ' + d['payment_status']")"
-step "    ¿lo ve la cocina sin pagar?" "$(curl -sf -b "$JAR" "$API/api/orders?scope=open" | j "str(len([o for o in d if o['id'] == $PID])) + ' pedidos'")"
-curl -sf -X POST "$API/api/public/$SLUG/$TOKEN/pay" -H 'content-type: application/json' \
-  -d "{\"order_id\":$PID,\"session_id\":\"$SESSION\",\"result\":\"ok\"}" > /dev/null
-step "    tras confirmarse el pago" "$(curl -sf -b "$JAR" "$API/api/orders?scope=open" | j "str(len([o for o in d if o['id'] == $PID])) + ' pedidos · ' + [o['payment_status'] for o in d if o['id'] == $PID][0]")"
+NUEVO=$(curl -sf -X POST "$API/api/public/$SLUG/$TOKEN/order" -H 'content-type: application/json' \
+  -d "{\"lines\":[{\"item_id\":$ITEM,\"qty\":1}],\"session_id\":\"$SESSION-2\"}")
+NID=$(echo "$NUEVO" | j "d['id']")
+step "10. «Lo cojo yo» en sala" "$(curl -sf -b "$JAR" -X POST "$API/api/orders/$NID/claim" | j "'lo tiene ' + d['claimed_name']")"
+step "    sin sesión queda fuera" "$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API/api/orders/$NID/claim") (401 = rechazado)"
+step "    al meterlo en el TPV" "$(curl -sf -b "$JAR" -X PATCH "$API/api/orders/$NID/status" | j "d['status'] + ', marca liberada: ' + str(d['claimed_by'] is None)")"
+
 
 echo
 echo "  Flujo completo verificado."
