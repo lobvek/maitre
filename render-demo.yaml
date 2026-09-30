@@ -23,6 +23,14 @@ services:
         value: "1"
       - key: MAITRE_DATA_DIR
         value: /opt/render/project/data
+      # Además de los locales de muestra, crea tu propia cuenta de operador para
+      # que no tengas que entrar con la contraseña pública de la demo.
+      - key: MAITRE_ADMIN_EMAIL
+        sync: false
+      - key: MAITRE_ADMIN_PASSWORD
+        sync: false
+      - key: MAITRE_ADMIN_NAME
+        sync: false
       - key: PUBLIC_URL
         fromService:
           type: web
