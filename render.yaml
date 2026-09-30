@@ -1,28 +1,21 @@
-# Render Blueprint de Maitre.
-# En render.com: New → Blueprint → conectar este repo → Apply.
+# Blueprint de Maitre. En render.com: New → Blueprint → conectar este repo → Apply.
 #
-# Este fichero describe el despliegue REAL, el de la prueba piloto: instancia de pago
-# con disco propio, sin datos de muestra y con la cuenta de operador que tú elijas.
+# Este es el despliegue de DEMOSTRACIÓN: gratis, para enseñar Maitre sin coste.
+# Trae los dos locales de muestra, y además tu propia cuenta de operador.
 #
-# ¿Por qué no el plan Free? Porque no tiene disco: cada reinicio borraría la carta,
-# las mesas y los pedidos del bar. Y porque se duerme a los 15 minutos sin visitas,
-# así que el primer cliente que escanease el QR esperaría casi un minuto a que
-# despertase. Para un bar de verdad, ninguna de las dos cosas vale.
+# No sirve para un bar de verdad: el plan Free no tiene disco, así que la carta,
+# las mesas y los pedidos se pierden en cada reinicio; y el servicio se duerme a
+# los 15 minutos sin visitas, así que el primer escaneo del QR tarda casi un minuto.
+# Cuando un bar entre en el piloto, se cambia este fichero por render-pilot.yaml.
 services:
   - type: web
-    name: maitre
+    name: maitre-demo
     runtime: node
-    plan: starter            # 7 $/mes. El disco se factura aparte (~0,25 $/GB).
-    region: frankfurt        # el más cercano a Barcelona
+    plan: free
+    region: frankfurt
     buildCommand: npm ci --omit=dev
     startCommand: node server/index.js
     healthCheckPath: /api/health
-    # La base de datos, las imágenes de la carta y las claves de las notificaciones
-    # viven aquí. Sin este disco se pierden en cada despliegue.
-    disk:
-      name: datos
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -30,21 +23,20 @@ services:
       # defecto de Render el servidor no arrancaría.
       - key: NODE_VERSION
         value: "24"
+      - key: SEED_ON_EMPTY
+        value: "1"
       - key: MAITRE_DATA_DIR
-        value: /var/data
-      # Cuenta de operador que se crea la primera vez. Se piden al aplicar el blueprint.
+        value: /opt/render/project/data
+      # Además de los locales de muestra, crea tu propia cuenta de operador para
+      # que no tengas que entrar con la contraseña pública de la demo.
       - key: MAITRE_ADMIN_EMAIL
         sync: false
       - key: MAITRE_ADMIN_PASSWORD
         sync: false
       - key: MAITRE_ADMIN_NAME
         sync: false
-      # Token del bot de Telegram, si se usa el aviso por Telegram. Puede quedarse vacío.
-      - key: MAITRE_TELEGRAM_BOT_TOKEN
-        sync: false
-      # URL pública con la que se generan los QR: la pone Render sola.
       - key: PUBLIC_URL
         fromService:
           type: web
-          name: maitre
+          name: maitre-demo
           envVarKey: RENDER_EXTERNAL_URL

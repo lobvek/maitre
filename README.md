@@ -56,26 +56,36 @@ La carta de un comensal se abre desde *Mesas y QR* → *Ver*, o directamente en 
 bash scripts/online.sh
 ```
 
-### En Render (lo que usamos para el piloto)
+### En Render
 
-`render.yaml` describe el despliegue real: instancia de pago con **disco propio**, sin datos de
-muestra y con la cuenta de operador que tú elijas. En render.com: *New → Blueprint* → conectar
-este repo → *Apply*. Render pedirá tres valores:
+Hay dos configuraciones, y la que Render lee siempre es `render.yaml`:
+
+| Fichero | Qué es | Coste |
+|---|---|---|
+| `render.yaml` | **Demostración**: para enseñar Maitre. Locales de muestra, sin disco | Gratis |
+| `render-pilot.yaml` | **Piloto**: bar de verdad. Disco propio, sin datos de muestra | ~7 $/mes + disco |
+
+**Montar la demostración**: en render.com, *New → Blueprint* → conectar este repo → *Apply*.
+Render pedirá tres valores, que crean tu cuenta de operador la primera vez:
 
 | Variable | Qué poner |
 |---|---|
-| `MAITRE_ADMIN_EMAIL` | tu email; será la cuenta de operador de Maitre |
-| `MAITRE_ADMIN_PASSWORD` | una contraseña larga y nueva (mínimo 8 caracteres) |
+| `MAITRE_ADMIN_EMAIL` | tu email |
+| `MAITRE_ADMIN_PASSWORD` | una contraseña nueva y larga (mínimo 8 caracteres) |
 | `MAITRE_ADMIN_NAME` | tu nombre |
 
-La cuenta **solo se crea la primera vez, con la base de datos vacía**. Cambiar después la variable
-no cambia la contraseña: eso se hace desde *Ajustes*, dentro del panel.
+La cuenta **solo se crea con la base de datos vacía**. Cambiar después la variable no cambia la
+contraseña: eso se hace desde *Ajustes*, dentro del panel.
 
-Cuesta unos 7 $/mes más el disco (~0,25 $/GB). No usamos el plan Free para un bar de verdad por dos
-razones: **no tiene disco**, así que cada reinicio borraría la carta, las mesas y los pedidos; y se
-duerme a los 15 minutos sin visitas, así que el primer cliente que escanease el QR esperaría casi un
-minuto. Para *enseñarlo* sí vale: `render-demo.yaml` es exactamente eso, gratis y con los locales de
-muestra.
+**Pasar al piloto**, el día que un bar diga que sí:
+
+```bash
+git mv render.yaml render-demo.yaml && git mv render-pilot.yaml render.yaml
+```
+
+y volver a aplicar el blueprint. La diferencia es que el de piloto lleva **disco**: sin él, cada
+reinicio de Render borraría la carta, las mesas y los pedidos del bar. Y el plan Free se duerme a los
+15 minutos sin visitas, así que el primer cliente en escanear el QR esperaría casi un minuto.
 
 ### En Fly.io
 
