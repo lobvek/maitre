@@ -1,0 +1,26 @@
+# Blueprint de DEMOSTRACIÓN: gratis, para enseñar Maitre sin coste.
+# Trae los dos locales de muestra y la cuenta marc@maitre.app / maitre2026.
+#
+# No sirve para un bar real: el plan Free no tiene disco (los datos se pierden en
+# cada reinicio) y el servicio se duerme a los 15 minutos sin visitas.
+services:
+  - type: web
+    name: maitre-demo
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SEED_ON_EMPTY
+        value: "1"
+      - key: MAITRE_DATA_DIR
+        value: /opt/render/project/data
+      - key: PUBLIC_URL
+        fromService:
+          type: web
+          name: maitre-demo
+          envVarKey: RENDER_EXTERNAL_URL

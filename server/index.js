@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getDb, get, insert, all, ROOT, UPLOAD_DIR } from './db.js';
 import { expirePendingPayments, releaseStaleClaims } from './orders-core.js';
-import { cookieParser, loadUser } from './auth.js';
+import { cookieParser, loadUser, hashPassword } from './auth.js';
 import { router as authRouter } from './routes/auth.js';
 import { router as venueRouter } from './routes/venue.js';
 import { router as menuRouter } from './routes/menu.js';
@@ -121,6 +121,32 @@ export function createApp() {
   return app;
 }
 
+/**
+ * Despliegue real: la primera vez, con la base vacía, crea la cuenta de operador
+ * a partir de las variables de entorno. Así no hace falta sembrar datos de muestra
+ * —ni dejar una contraseña conocida— solo para poder entrar.
+ */
+async function bootstrapAdmin() {
+  const email = (process.env.MAITRE_ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = process.env.MAITRE_ADMIN_PASSWORD || '';
+  if (!get('SELECT id FROM users LIMIT 1') && !email) {
+    console.warn('\n  ⚠ No hay ninguna cuenta y no se ha definido MAITRE_ADMIN_EMAIL:');
+    console.warn('    nadie podrá entrar. Define MAITRE_ADMIN_EMAIL y MAITRE_ADMIN_PASSWORD.\n');
+    return;
+  }
+  if (!email) return;
+  if (get('SELECT id FROM users WHERE email = ?', email)) return;   // ya existe: no se toca
+  if (password.length < 8) {
+    console.warn('\n  ⚠ MAITRE_ADMIN_PASSWORD debe tener al menos 8 caracteres. No se ha creado la cuenta.\n');
+    return;
+  }
+  insert('users', {
+    venue_id: null, email, password_hash: hashPassword(password),
+    name: process.env.MAITRE_ADMIN_NAME || 'Operador Maitre', role: 'superadmin',
+  });
+  console.log(`  Cuenta de operador creada: ${email}`);
+}
+
 // Compara rutas reales: import.meta.url viene URL-encoded y el argv no.
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 if (isMain) {
@@ -128,8 +154,13 @@ if (isMain) {
   const app = createApp();
   // Deploy de demostración: si la base de datos está vacía, se siembran los dos locales piloto.
   if (process.env.SEED_ON_EMPTY === '1' && !get('SELECT id FROM venues LIMIT 1')) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('\n  ⚠ SEED_ON_EMPTY=1 en producción: se van a crear locales de muestra');
+      console.warn('    y la cuenta marc@maitre.app con una contraseña pública. Quítalo para un despliegue real.\n');
+    }
     await import('./seed.js');
   }
+  await bootstrapAdmin();
   app.listen(port, () => {
     console.log(`\n  Maitre en marcha  →  http://localhost:${port}`);
     console.log(`  Panel del local   →  http://localhost:${port}/panel`);

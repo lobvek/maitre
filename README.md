@@ -56,19 +56,39 @@ La carta de un comensal se abre desde *Mesas y QR* → *Ver*, o directamente en 
 bash scripts/online.sh
 ```
 
-**Para siempre, en Fly.io** (URL fija `https://maitre.fly.dev`, ~5 €/mes, la base de datos en un volumen):
+### En Render (lo que usamos para el piloto)
+
+`render.yaml` describe el despliegue real: instancia de pago con **disco propio**, sin datos de
+muestra y con la cuenta de operador que tú elijas. En render.com: *New → Blueprint* → conectar
+este repo → *Apply*. Render pedirá tres valores:
+
+| Variable | Qué poner |
+|---|---|
+| `MAITRE_ADMIN_EMAIL` | tu email; será la cuenta de operador de Maitre |
+| `MAITRE_ADMIN_PASSWORD` | una contraseña larga y nueva (mínimo 8 caracteres) |
+| `MAITRE_ADMIN_NAME` | tu nombre |
+
+La cuenta **solo se crea la primera vez, con la base de datos vacía**. Cambiar después la variable
+no cambia la contraseña: eso se hace desde *Ajustes*, dentro del panel.
+
+Cuesta unos 7 $/mes más el disco (~0,25 $/GB). No usamos el plan Free para un bar de verdad por dos
+razones: **no tiene disco**, así que cada reinicio borraría la carta, las mesas y los pedidos; y se
+duerme a los 15 minutos sin visitas, así que el primer cliente que escanease el QR esperaría casi un
+minuto. Para *enseñarlo* sí vale: `render-demo.yaml` es exactamente eso, gratis y con los locales de
+muestra.
+
+### En Fly.io
+
+URL fija `https://maitre.fly.dev`, ~5 €/mes, base de datos en un volumen:
 
 ```bash
 fly auth login          # una vez: crea la cuenta o entra
 bash scripts/deploy-fly.sh
 ```
 
-**Gratis, en Render** (se duerme sin visitas y en el plan Free los datos vuelven a la demo al reiniciar —
-vale para enseñarlo, no para un piloto): sube el repo a GitHub y en render.com elige *New → Blueprint*;
-`render.yaml` hace el resto.
-
 `Dockerfile` y `fly.toml` ya están preparados; el mismo Dockerfile sirve para Railway.
-Con `SEED_ON_EMPTY=1` el primer arranque siembra los dos locales de demostración.
+Con `SEED_ON_EMPTY=1` el primer arranque siembra los dos locales de demostración —
+nunca en el despliegue de un bar real.
 
 ## Comprobar que funciona
 
@@ -212,6 +232,7 @@ El detalle, con ejemplo de carga útil y verificación de firma, está en [`docs
 | `SEED_ON_EMPTY` | — | Con `1`, siembra los datos de demostración si la base está vacía |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | se generan en `data/vapid.json` | Claves de las notificaciones push al móvil del personal |
 | `MAITRE_TELEGRAM_BOT_TOKEN` | — | Token del bot de Maitre para avisar por Telegram a los grupos de los locales |
+| `MAITRE_ADMIN_EMAIL` / `MAITRE_ADMIN_PASSWORD` / `MAITRE_ADMIN_NAME` | — | Cuenta de operador que se crea en el primer arranque con la base vacía. Si ya existe, no se toca |
 | `NODE_ENV` | — | Con `production` la cookie de sesión exige HTTPS |
 
 ## Antes de poner esto en producción
