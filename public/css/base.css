@@ -262,6 +262,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .enter { animation: enter .44s var(--ease-out) both; }
 @keyframes enter { from { opacity: 0; transform: translateY(9px); } }
 .stagger > * { animation: enter .44s var(--ease-out) both; }
+.entra { animation: enter .34s var(--ease-out) both; }
 .stagger > *:nth-child(1) { animation-delay: 0ms } .stagger > *:nth-child(2) { animation-delay: 34ms }
 .stagger > *:nth-child(3) { animation-delay: 68ms } .stagger > *:nth-child(4) { animation-delay: 102ms }
 .stagger > *:nth-child(5) { animation-delay: 136ms } .stagger > *:nth-child(6) { animation-delay: 170ms }

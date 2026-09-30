@@ -32,6 +32,18 @@ export function transicion(cambio) {
 }
 
 /**
+ * Entrada de una sección. Se anima el contenedor que YA está en el documento:
+ * pintar fuera y luego insertar rompería a las vistas que buscan sus propios
+ * elementos por id mientras se montan.
+ */
+export function entrar(nodo) {
+  if (quieto) return;
+  nodo.classList.remove('entra');
+  void nodo.offsetWidth;          // reinicia la animación
+  nodo.classList.add('entra');
+}
+
+/**
  * FLIP: mueve un elemento de un sitio a otro con una animación real en vez de
  * un salto. Se mide dónde estaba, se repinta y se anima desde la posición vieja.
  */

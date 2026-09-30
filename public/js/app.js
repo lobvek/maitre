@@ -1,6 +1,6 @@
 // Panel del establecimiento: enrutador por hash y carga de vistas.
 import { api, $, $$, toast, el, icon, loader } from '/js/core.js';
-import { transicion, contarTodo } from '/js/motion.js';
+import { entrar, contarTodo } from '/js/motion.js';
 
 export const app = { me: null, venue: null, user: null };
 
@@ -53,14 +53,12 @@ async function route() {
   view.innerHTML = loader();
   try {
     const mod = await import(`/js/views/${def.id}.js`);
-    const pintar = document.createElement('div');
-    await mod.render(pintar);
-    // La sección entra con transición en vez de aparecer de golpe.
-    transicion(() => {
-      view.innerHTML = '';
-      view.append(...pintar.childNodes);
-      contarTodo(view);   // dentro: fuera todavía no están los nodos en el documento
-    });
+    view.innerHTML = '';
+    // Se pinta sobre el nodo que ya está en el documento: las vistas buscan sus
+    // propios elementos por id mientras se montan, y fuera del documento no existen.
+    await mod.render(view);
+    contarTodo(view);
+    entrar(view);   // la sección entra en vez de aparecer de golpe
   } catch (err) {
     console.error(err);
     view.innerHTML = `<div class="notice err">No se ha podido cargar esta sección: ${err.message}</div>`;
