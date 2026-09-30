@@ -68,7 +68,7 @@ export async function render(root) {
         ${days.length ? chart(days, { kind: 'line', height: 200, format: (v) => Math.round(v) + ' €' }) : '<div class="empty">Sin datos.</div>'}
       </div>
 
-      <div class="grid g2" style="margin-bottom:20px">
+      <div class="grid g2 stagger" style="margin-bottom:20px">
         <div class="card"><h3>Horas punta</h3>
           ${chart(hours, { kind: 'bar', height: 180, color: 'var(--c1)', format: (v) => Math.round(v) })}
           <div class="muted" style="font-size:12.5px">Pedidos por hora del día.</div></div>
@@ -90,7 +90,7 @@ export async function render(root) {
             ${num(k.ordering_sessions)} acabaron pidiendo</div>
         </div></div>
 
-      <div class="grid g2" style="margin-bottom:20px">
+      <div class="grid g2 stagger" style="margin-bottom:20px">
         <div class="card"><h3>Por categoría</h3>
           <table><thead><tr><th>Categoría</th><th class="num">Uds.</th><th class="num">Importe</th></tr></thead>
           <tbody>${d.by_category.map((r) => {

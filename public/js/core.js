@@ -1,5 +1,15 @@
 // Utilidades compartidas por todas las pantallas de Maitre.
 
+// La transición entre páginas (@view-transition) se descarta sola cuando la navegación
+// es demasiado rápida o se interrumpe, y deja una promesa rechazada que ensucia la consola.
+// La recogemos aquí: la animación es un extra, nunca un error.
+for (const ev of ['pagereveal', 'pageswap']) {
+  addEventListener(ev, (e) => {
+    e.viewTransition?.finished?.catch(() => {});
+    e.viewTransition?.ready?.catch(() => {});
+  });
+}
+
 export async function api(path, { method = 'GET', body, raw, headers = {} } = {}) {
   const opts = { method, headers: { ...headers }, credentials: 'same-origin' };
   if (body !== undefined) {

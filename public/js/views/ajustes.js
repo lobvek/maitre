@@ -9,7 +9,7 @@ export async function render(root) {
   const f = v.features || {};
 
   root.innerHTML = `
-    <div class="grid g2">
+    <div class="grid g2 stagger">
       <div class="card">
         <h3>Identidad</h3>
         <div class="field"><label>Nombre comercial</label><input id="name" value="${esc(v.name)}"></div>

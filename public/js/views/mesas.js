@@ -40,7 +40,7 @@ function paint() {
     <div class="card" style="margin-bottom:18px">
       <div class="card-head"><h3 style="margin:0">${esc(zone?.name || 'Sin zona')}</h3>
         <span class="muted">${list.length} mesas</span></div>
-      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">
+      <div class="grid stagger" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">
         ${list.map((t) => `<div class="card flat" style="padding:12px">
           <div class="spread"><strong style="font-family:var(--serif);font-size:19px">Mesa ${esc(t.name)}</strong>
             <span class="tag ${({ free: '', occupied: 'green', reserved: 'blue', cleaning: 'amber' })[t.status]}">

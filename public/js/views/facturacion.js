@@ -15,7 +15,7 @@ export async function render(root) {
       Eres de la <strong>primera cohorte</strong>: plan Servicio a 19 €/mes durante 24 meses
       (hasta ${fmtDate(b.plan_until, { day: '2-digit', month: 'long', year: 'numeric' })}). Después pasa al precio público del plan Servicio.</div>` : ''}
 
-    <div class="grid g3" style="margin-bottom:24px">
+    <div class="grid g3 stagger" style="margin-bottom:24px">
       ${b.plans.filter((p) => !p.invite_only).map((p) => `
         <div class="card" style="${current === p.id ? 'border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)' : ''}">
           <div class="spread"><h3 style="margin:0">${esc(p.name)}</h3>
@@ -37,7 +37,7 @@ export async function render(root) {
         </div>`).join('')}
     </div>
 
-    <div class="grid g2">
+    <div class="grid g2 stagger">
       <div class="card">
         <h3>Uso actual</h3>
         <table><tbody>

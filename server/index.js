@@ -56,6 +56,9 @@ export function createApp() {
 
   // --- Estáticos ---
   app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
+  // Fuentes, iconos y logotipos cambian muy de vez en cuando: se cachean una semana para que
+  // la tablet de sala y los móviles no los vuelvan a pedir en cada pantalla.
+  app.use('/assets', express.static(resolve(ROOT, 'public/assets'), { maxAge: '7d' }));
   app.use(express.static(resolve(ROOT, 'public'), { extensions: ['html'], maxAge: 0 }));
 
   // --- Páginas ---

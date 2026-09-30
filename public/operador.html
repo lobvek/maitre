@@ -14,14 +14,19 @@
   .wrapper { padding: 26px; max-width: 1240px; margin: 0 auto; }
   .tabs button { padding: 7px 14px; border-radius: 100px; border: 0; background: transparent; font: 600 13.5px var(--sans); cursor: pointer; color: var(--ink-2); }
   .tabs button.on { background: var(--ink); color: #fff; }
+  .tabs button { transition: background var(--t-fast) var(--ease-micro), color var(--t-fast) var(--ease-micro); }
+  .tabs button:hover:not(.on) { background: var(--surface-2); color: var(--ink); }
   .mile { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); }
   .bar { height: 8px; border-radius: 8px; background: var(--surface-2); overflow: hidden; flex: 1; }
-  .bar i { display: block; height: 100%; background: var(--green); }
+  .bar i { display: block; height: 100%; background: var(--green); border-radius: 8px;
+    transform-origin: left center; animation: crecer var(--t-slow) var(--ease-macro) both; }
+  @keyframes crecer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .bar i { animation: none; } }
 </style>
 </head>
 <body>
 <div class="topbar">
-  <strong style="font-family:var(--serif);font-size:20px">Maitre</strong>
+  <a href="/" style="display:flex;align-items:center"><img src="/assets/logotipo.png" alt="Maitre" style="height:26px;width:auto"></a>
   <span class="tag brand">Operador</span>
   <div class="tabs grow">
     <button data-tab="cartera" class="on">Cartera</button>
@@ -35,17 +40,23 @@
 <div class="wrapper" id="view"></div>
 <script type="module">
 import { api, money, esc, el, $, $$, toast, fmtDate, num, chart, modal, icon, loader } from '/js/core.js';
+import { transicion, contarTodo, haptic, skeletonFilas } from '/js/motion.js';
 
 let tab = 'cartera';
 $$('.tabs button').forEach((b) => b.onclick = () => {
+  if (b.classList.contains('on')) return;
+  haptic(8);
   $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  tab = b.dataset.tab; paint();
+  tab = b.dataset.tab;
+  // El repintado va dentro de la transición, pero sin devolver su promesa: así se ve
+  // el esqueleto enseguida en vez de congelar la pantalla anterior hasta que carguen los datos.
+  transicion(() => { paint(); });
 });
 $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/entrar'; };
 
 async function paint() {
   const view = $('#view');
-  view.innerHTML = loader();
+  view.innerHTML = ['locales', 'contactos', 'registro'].includes(tab) ? skeletonFilas(6, 5) : loader();
   if (tab === 'cartera') return cartera(view);
   if (tab === 'locales') return locales(view);
   if (tab === 'pilotos') return pilotos(view);
@@ -58,14 +69,14 @@ async function cartera(view) {
   const k = d.kpis;
   const signups = d.signups_by_month.map((r) => ({ label: r.month, short: r.month.slice(5), value: r.n }));
   view.innerHTML = `
-    <div class="grid g4" style="margin-bottom:22px">
-      <div class="kpi"><div class="k">MRR</div><div class="v">${money(k.mrr_cents)}</div><div class="d">ARR ${money(k.arr_cents)}</div></div>
-      <div class="kpi"><div class="k">Locales de pago</div><div class="v">${k.paying}</div>
+    <div class="grid g4 stagger" style="margin-bottom:22px">
+      <div class="kpi"><div class="k">MRR</div><div class="v" data-count="${k.mrr_cents}" data-count-currency="EUR">${money(k.mrr_cents)}</div><div class="d">ARR ${money(k.arr_cents)}</div></div>
+      <div class="kpi"><div class="k">Locales de pago</div><div class="v" data-count="${k.paying}">${k.paying}</div>
         <div class="d">${k.trials} en piloto${k.demos ? ` · ${k.demos} de muestra` : ''}</div></div>
-      <div class="kpi"><div class="k">Ingreso medio</div><div class="v">${money(k.arpa_cents)}</div><div class="d">por local y mes</div></div>
-      <div class="kpi"><div class="k">Actividad 30 días</div><div class="v">${num(k.orders_30d)}</div><div class="d">pedidos · ${money(k.gmv_30d_cents)} servidos</div></div>
+      <div class="kpi"><div class="k">Ingreso medio</div><div class="v" data-count="${k.arpa_cents}" data-count-currency="EUR">${money(k.arpa_cents)}</div><div class="d">por local y mes</div></div>
+      <div class="kpi"><div class="k">Actividad 30 días</div><div class="v" data-count="${k.orders_30d}">${num(k.orders_30d)}</div><div class="d">pedidos · ${money(k.gmv_30d_cents)} servidos</div></div>
     </div>
-    <div class="grid g2">
+    <div class="grid g2 stagger">
       <div class="card">
         <h3>Hitos del plan de empresa</h3>
         <p class="muted" style="font-size:13.5px">Objetivos comprometidos en el plan frente a la cartera real.</p>
@@ -85,6 +96,7 @@ async function cartera(view) {
       <div class="card"><h3>Altas por mes</h3>
         ${signups.length ? chart(signups, { kind: 'bar', height: 200, multicolor: true }) : '<div class="empty">Sin datos.</div>'}</div>
     </div>`;
+  contarTodo(view);
 }
 
 async function locales(view) {
@@ -178,7 +190,7 @@ async function pilotos(view) {
   view.innerHTML = `<div class="notice info" style="margin-bottom:18px">Regla del estudio: el piloto acaba el día 30 con una decisión
     explícita — contratar, ampliar por una causa concreta o retirar el material. Éxito: ≥20 % de mesas usan pedido o llamada,
     +5 % de ticket sobre la línea base y 0 pedidos perdidos.</div>
-    <div class="grid g2">${rows.map((v, i) => {
+    <div class="grid g2 stagger">${rows.map((v, i) => {
       const r = reports[i];
       return `<div class="card">
         <div class="spread"><h3 style="margin:0">${esc(v.name)}</h3>
@@ -190,7 +202,7 @@ async function pilotos(view) {
         ${r.checks.map((c) => `<div class="spread" style="padding:6px 0;border-top:1px solid var(--line-2);font-size:13.5px">
           <span>${c.ok ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg>' : ''} ${esc(c.label)}</span><strong>${esc(c.value)}</strong></div>`).join('')}
         <div class="grid g3" style="margin-top:14px;gap:10px">
-          <div class="kpi" style="padding:10px 12px"><div class="k">Mesas que escanean</div><div class="v" style="font-size:1.3rem">${r.usage.scan_pct}%</div></div>
+          <div class="kpi" style="padding:10px 12px"><div class="k">Mesas que escanean</div><div class="v" style="font-size:1.3rem" data-count="${r.usage.scan_pct}" data-count-suffix="%">${r.usage.scan_pct}%</div></div>
           <div class="kpi" style="padding:10px 12px"><div class="k">Aceptar pedido</div><div class="v" style="font-size:1.3rem">${r.value.accept_minutes ?? '—'} min</div></div>
           <div class="kpi" style="padding:10px 12px"><div class="k">Valoración</div><div class="v" style="font-size:1.3rem">${r.value.rating ?? '—'}</div>
             <div class="d">${r.value.reviews} reseñas · ${r.value.optins} opt-in</div></div>
@@ -204,6 +216,7 @@ async function pilotos(view) {
       </div>`;
     }).join('')}</div>`;
 
+  contarTodo(view);
   $$('[data-edit]').forEach((b) => b.onclick = async () => {
     const v = rows.find((x) => x.id === Number(b.dataset.edit));
     const r = reports[rows.indexOf(v)].pilot;

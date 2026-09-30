@@ -15,6 +15,8 @@
   .tabs { display: flex; gap: 4px; }
   .tabs button { padding: 7px 14px; border-radius: 100px; border: 0; background: transparent; font: 600 13.5px var(--sans); cursor: pointer; color: var(--ink-2); }
   .tabs button.on { background: var(--ink); color: #fff; }
+  .tabs button { transition: background var(--t-fast) var(--ease-micro), color var(--t-fast) var(--ease-micro); }
+  .tabs button:hover:not(.on) { background: var(--surface-2); color: var(--ink); }
 
   /* Hoja de QR provisional: tarjetas recortables para empezar hoy mismo */
   .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -42,7 +44,8 @@
   .face .reservado { font-family: var(--serif); font-size: 20px; letter-spacing: .18em; text-transform: uppercase; }
   .modulos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
   .modulo { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; text-align: center; font-size: 13px; }
-  .modulo span { font-size: 22px; display: block; margin-bottom: 6px; }
+  .modulo span { display: block; margin-bottom: 8px; color: var(--brand); }
+  .modulo span .i { width: 22px; height: 22px; }
 
   @media print {
     .toolbar, .noprint { display: none !important; }
@@ -68,6 +71,7 @@
 </div>
 <script type="module">
 import { api, esc, $, $$, icon, loader } from '/js/core.js';
+import { transicion, haptic } from '/js/motion.js';
 
 $('#out').innerHTML = loader();
 const d = await api('/api/tables/print');
@@ -78,10 +82,10 @@ let tab = 'qr';
 const story = 'Esta pieza es de roble recuperado de toneles de vino. Cada veta cuenta de dónde viene; el número de lote permite seguir su origen.';
 
 const MODULOS = [
-  ['🧻', 'Servilletero'],
-  ['🌬️', 'Cubrecenicero protegido del viento'],
-  ['🍬', 'Sobres de azúcar'],
-  ['☕', 'Aro para taza de espresso'],
+  ['note', 'Servilletero'],
+  ['flame', 'Cubrecenicero protegido del viento'],
+  ['wheat', 'Sobres de azúcar'],
+  ['coffee', 'Aro para taza de espresso'],
 ];
 
 const hojaQr = () => `<div class="cards">${d.tables.map((t) => `
@@ -114,7 +118,7 @@ const vistaCuna = () => `
     <h2 style="margin-top:28px">Módulos que se deslizan en la base</h2>
     <p class="muted" style="font-size:13.5px">La misma cuña sirve para un bar de tapas o para una cafetería de especialidad:
     cambia el módulo, no la pieza. Los grabados y el acabado se personalizan con tu marca.</p>
-    <div class="modulos">${MODULOS.map(([i, n]) => `<div class="modulo"><span>${i}</span>${n}</div>`).join('')}</div>
+    <div class="modulos stagger">${MODULOS.map(([i, n]) => `<div class="modulo"><span>${icon(i)}</span>${n}</div>`).join('')}</div>
     <div class="notice info" style="margin-top:18px">Estamos preparando los <strong>renders de cada diseño y módulo</strong>
     para que puedas verlos antes de pedirlos. Aparecerán aquí mismo.</div>
   </div>`;
@@ -134,8 +138,13 @@ function paint() {
   $('#out').innerHTML = tab === 'qr' ? hojaQr() : vistaCuna();
 }
 $$('.tabs button').forEach((b) => b.onclick = () => {
-  $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  tab = b.dataset.tab; paint();
+  if (b.classList.contains('on')) return;
+  haptic(8);
+  transicion(() => {
+    $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
+    tab = b.dataset.tab;
+    paint();
+  });
 });
 paint();
 </script>

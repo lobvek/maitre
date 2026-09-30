@@ -108,7 +108,7 @@ roles reales y planes con facturas.
 
 ## Arquitectura
 
-- **Node.js 24 + Express 5**, ES Modules. Únicas dependencias: `express` y `qrcode`.
+- **Node.js 24 + Express 5**, ES Modules. Únicas dependencias: `express`, `qrcode` y `web-push`.
 - **SQLite integrado en Node** (`node:sqlite`): un fichero, sin servidor de base de datos ni compilación nativa.
 - **Sin build en el front**: HTML, CSS propio y ES Modules nativos.
 - **Tiempo real por SSE**, con canal por local (personal) y canal por mesa (comensal).
@@ -130,9 +130,45 @@ public/
   app.html + js/views/   panel del local
   sala.html       pantalla de sala
   m.html          carta del comensal
+  js/motion.js    motor de movimiento (transiciones, FLIP, arrastre, cifras)
+  css/base.css    tokens de marca, tipografía, componentes y animaciones
+  assets/         logotipos, iconos (sprite SVG), fuentes propias
   cunas.html      hoja imprimible de cuñas
   operador.html   consola de Maitre
 ```
+
+## Diseño y movimiento
+
+El sistema visual sale de medir sitios reales, no de improvisar: los valores extraídos de
+Linear, Stripe, Sunday, Qamarero y Last.app están en [`docs/investigacion-ui.md`](docs/investigacion-ui.md).
+Lo que se aplicó:
+
+- **Dos velocidades.** Micro (`--t-fast`, 120 ms, `--ease-micro`) para lo que responde al dedo;
+  macro (`--t-slow`, 480 ms, `--ease-macro`) para superficies que aparecen o se mueven.
+  Mezclarlas es lo que hace que una interfaz parezca lenta o nerviosa.
+- **Radios contenidos**: 6–12 px en panel y sala, 16–18 px en la carta del comensal.
+  Los radios grandes en todo son de folleto, no de herramienta.
+- **Interletraje que se cierra al crecer el texto**, hasta −0,034em en los titulares.
+- **Series de gráfico que se distinguen en tono y en claridad** (`--c1`…`--c6`), para que también
+  funcionen impresas en blanco y negro.
+- **Tipografía propia**: Fraunces para títulos y Figtree para interfaz, en subconjuntos woff2 servidos
+  desde el propio dominio.
+
+`public/js/motion.js` es el motor y es pequeño a propósito:
+
+| Función | Para qué |
+| --- | --- |
+| `transicion(cambio)` | View Transitions al cambiar de pestaña o de sección, con salida segura si el navegador no puede |
+| `flip(nodos, repintar)` | Los tickets de sala se deslizan de columna en vez de saltar |
+| `contar` / `contarTodo` | Las cifras suben hasta su valor (`data-count`) |
+| `arrastrable` | Las hojas inferiores se arrastran con el dedo para cerrarse |
+| `volarAlCarrito` | El plato vuela hasta el carrito al añadirlo |
+| `haptic` | Vibración corta al añadir, enviar o avisar |
+| `ocupado(btn, tarea)` | Espera dentro del botón, sin que cambie de tamaño |
+| `skeletonFilas` | Esqueleto en las tablas mientras cargan |
+
+Todo respeta `prefers-reduced-motion` y ninguna animación puede dejar la pantalla a medias:
+si el navegador falla, el cambio se aplica a secas.
 
 ## Integración con el TPV
 

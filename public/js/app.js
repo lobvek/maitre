@@ -56,8 +56,11 @@ async function route() {
     const pintar = document.createElement('div');
     await mod.render(pintar);
     // La sección entra con transición en vez de aparecer de golpe.
-    transicion(() => { view.innerHTML = ''; view.append(...pintar.childNodes); });
-    contarTodo(view);
+    transicion(() => {
+      view.innerHTML = '';
+      view.append(...pintar.childNodes);
+      contarTodo(view);   // dentro: fuera todavía no están los nodos en el documento
+    });
   } catch (err) {
     console.error(err);
     view.innerHTML = `<div class="notice err">No se ha podido cargar esta sección: ${err.message}</div>`;

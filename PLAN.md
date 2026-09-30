@@ -93,15 +93,33 @@ public/
 | El estudio dice | En el software |
 |---|---|
 | Opción C: capa de mesa, no carta QR ni TPV | Posicionamiento y copy de la web reescritos; nunca «carta QR» |
-| Precios Mesa 19 / Servicio 39 / Local 69 / Fundadores 19 × 24 meses | `plans.js`; reparto revisado el 13-09 (pedido en Mesa, analítica en Servicio); Fundadores solo lo asigna el operador |
+| Precios Mesa 19 / Servicio 39 / Fundadores 19 × 24 meses | `plans.js`; reparto revisado el 13-09 (pedido en Mesa, analítica en Servicio); Fundadores solo lo asigna el operador. El tercer plan se retiró: no se vende lo que aún no está construido |
 | Piloto = experimento con objetivo, baseline, revisión semanal y decisión | Diseño del piloto por local + cuadro de mando con los 4 criterios de éxito |
 | QR administrable y lote en la cuña | Código permanente `/q/…` grabado; token y dominio cambian sin regrabar |
 | Hardware a coste completo, depósito en piloto | Copy de precios y campo de depósito en el piloto |
 | Fase 1: upselling, reseñas, opt-in | Sugerencias por plato; valoración tras el servicio con opt-in |
 | Fiabilidad: el pedido no puede perderse | Alarma en sala a los 3 min sin aceptar; «pedidos perdidos» en el cuadro del piloto |
-| Pago y TPV: fase 2 | Pago con el móvil e integraciones solo en Local |
+| Pago y TPV: fase 2 | Pago con el móvil, conexión con TPV y varios locales viven en `ROADMAP`: no se venden en ningún plan y solo el operador puede abrirlos para pruebas internas |
 | No ser sistema fiscal (VERI*FACTU) | La cuenta se presenta como resumen de consumo, no ticket |
 | Métricas (tabla 12) | % mesas que escanean/piden/llaman, tiempo a aceptar, ticket vs base, retención semana 4 |
+
+## 4 quater. Diseño: investigación y movimiento
+
+No se inventó un lenguaje visual: se midieron sitios reales desde el navegador y se copiaron los
+valores que funcionan. La tabla completa está en [`docs/investigacion-ui.md`](docs/investigacion-ui.md).
+
+| Lo que se midió | Lo que se hizo |
+|---|---|
+| Linear separa una curva macro (`.7s`) de una micro (`.16s`) | Dos velocidades en todo el producto: `--t-fast` para el dedo, `--t-slow` para las superficies |
+| Linear y Stripe usan radios de 4–9 px en la herramienta | Radios recalibrados: 6–12 px en panel y sala, 16–18 px en la carta |
+| Sunday cierra el interletraje hasta −0,05em | Interletraje por tamaño, hasta −0,034em en titulares |
+| Qamarero y Last.app van con `0.15s ease` en todo | Ventaja gratis: en hostelería nadie cuida el movimiento, y es lo primero que se nota al enseñarlo |
+| Tebi rompe el ritmo con fondos oscuros y cálidos | Secciones en `--coffee` en la web, para no parecer una fila de tarjetas blancas |
+
+El motor es `public/js/motion.js`: View Transitions, FLIP en los tickets de sala, hojas que se
+arrastran con el dedo, cifras que cuentan, vibración corta y esqueletos de carga. Respeta
+`prefers-reduced-motion` y cada animación tiene salida segura: si el navegador no puede, el cambio
+se aplica igualmente sin animar.
 
 ## 5. Verificación
 
