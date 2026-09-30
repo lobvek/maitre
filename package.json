@@ -4,7 +4,7 @@
   "description": "Maitre — carta digital por QR, pedido desde la mesa y gestión de sala para hostelería",
   "type": "module",
   "engines": {
-    "node": ">=22.5"
+    "node": ">=24"
   },
   "scripts": {
     "start": "node server/index.js",

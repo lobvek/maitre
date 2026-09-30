@@ -26,6 +26,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # node:sqlite solo está disponible sin flag desde Node 23.4. Con el Node por
+      # defecto de Render el servidor no arrancaría.
+      - key: NODE_VERSION
+        value: "24"
       - key: MAITRE_DATA_DIR
         value: /var/data
       # Cuenta de operador que se crea la primera vez. Se piden al aplicar el blueprint.
