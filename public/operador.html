@@ -34,13 +34,14 @@
     <button data-tab="pilotos">Pilotos</button>
     <button data-tab="contactos">Contactos</button>
     <button data-tab="registro">Registro</button>
+    <button data-tab="sistema">Sistema</button>
   </div>
   <button class="btn sm" id="logout">Salir</button>
 </div>
 <div class="wrapper" id="view"></div>
 <script type="module">
 import { api, money, esc, el, $, $$, toast, fmtDate, num, chart, modal, icon, loader } from '/js/core.js';
-import { transicion, contarTodo, haptic, skeletonFilas } from '/js/motion.js';
+import { transicion, contarTodo, haptic, skeletonFilas, ocupado } from '/js/motion.js';
 
 let tab = 'cartera';
 $$('.tabs button').forEach((b) => b.onclick = () => {
@@ -56,11 +57,12 @@ $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'PO
 
 async function paint() {
   const view = $('#view');
-  view.innerHTML = ['locales', 'contactos', 'registro'].includes(tab) ? skeletonFilas(6, 5) : loader();
+  view.innerHTML = ['locales', 'contactos', 'registro', 'sistema'].includes(tab) ? skeletonFilas(6, 4) : loader();
   if (tab === 'cartera') return cartera(view);
   if (tab === 'locales') return locales(view);
   if (tab === 'pilotos') return pilotos(view);
   if (tab === 'contactos') return contactos(view);
+  if (tab === 'sistema') return sistema(view);
   return registro(view);
 }
 
@@ -100,10 +102,11 @@ async function cartera(view) {
 }
 
 async function locales(view) {
-  const rows = await api('/api/admin/venues');
+  const [rows, grupos] = await Promise.all([api('/api/admin/venues'), api('/api/admin/groups')]);
   view.innerHTML = `
     <div class="spread" style="margin-bottom:14px">
       <input id="q" placeholder="Buscar local…" style="max-width:320px">
+      <button class="btn sm" id="nuevo-grupo">+ Grupo de locales</button>
       <button class="btn primary sm" id="nuevo">+ Local para un piloto</button>
     </div>
     <div class="card" style="padding:0"><table>
@@ -146,21 +149,34 @@ async function locales(view) {
     if (creado) { toast(`${creado.name} creado. Ya puedes cargarle la carta.`, 'ok'); paint(); }
   };
 
+  $('#nuevo-grupo').onclick = async () => {
+    const nombre = prompt('Nombre de la marca o franquicia:');
+    if (!nombre) return;
+    await api('/api/admin/groups', { method: 'POST', body: { name: nombre } });
+    toast('Grupo creado. Ahora asígnale locales desde Gestionar.', 'ok');
+    paint();
+  };
+
   $('#q').oninput = (e) => {
     const q = e.target.value.toLowerCase();
     $$('#view tbody tr').forEach((tr) => tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none');
   };
   $$('[data-v]').forEach((b) => b.onclick = async () => {
     const v = rows.find((x) => x.id === Number(b.dataset.v));
+    const personas = await api(`/api/admin/venues/${v.id}/users`);
     const body = el('div', { html: `
       <div class="field"><label>Plan</label><select id="plan">
         ${[['trial', 'Piloto (30 días)'], ['mesa', 'Mesa · 19 €'], ['servicio', 'Servicio · 39 €'],
-           ['founders', 'Fundadores · 19 € durante 24 meses'], ['paused', 'En pausa']]
+           ['grupo', 'Grupo · 29 € por local'], ['founders', 'Fundadores · 19 € durante 24 meses'], ['paused', 'En pausa']]
           .map(([p, n]) => `<option value="${p}" ${v.plan === p ? 'selected' : ''}>${n}</option>`).join('')}
       </select></div>
       <div class="field"><label>Estado</label><select id="status">
         ${['active', 'suspended', 'churned'].map((s) => `<option value="${s}" ${v.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select></div>
+      <div class="field"><label>Grupo de locales (franquicia)</label><select id="grupo">
+        <option value="">Ninguno · local suelto</option>
+        ${grupos.map((g) => `<option value="${g.id}" ${v.group_id === g.id ? 'selected' : ''}>${esc(g.name)} · ${g.venues} locales</option>`).join('')}
+      </select><div class="help">El plan Grupo se cobra por local, más barato que Servicio, a partir de cinco.</div></div>
       <label class="row"><input type="checkbox" id="pilot" ${v.is_pilot ? 'checked' : ''}> <span>Marcar como local piloto</span></label>
       <label class="row"><input type="checkbox" id="demo" ${v.is_demo ? 'checked' : ''}> <span>Local de muestra (no cuenta para el MRR)</span></label>
       <fieldset style="margin-top:14px"><legend>Abrir funciones en preparación</legend>
@@ -168,11 +184,40 @@ async function locales(view) {
           .map(([k, n]) => `<label class="row" style="font-weight:400"><input type="checkbox" data-beta="${k}"> <span>${n}</span></label>`).join('')}
         <div class="help">Solo para pruebas internas. No se venden todavía.</div></fieldset>
       <div class="field" style="margin-top:14px"><label>Ampliar prueba (días)</label><input id="ext" type="number" min="0" max="120" placeholder="0"></div>
+      <fieldset style="margin-top:14px"><legend>Personas con acceso</legend>
+        ${personas.map((u) => `<div class="spread" style="padding:6px 0;border-top:1px solid var(--line-2);font-size:13.5px">
+          <span>${esc(u.name || u.email)} <span class="tag">${esc(u.role)}</span>
+            <span class="muted">${esc(u.email)}</span></span>
+          <span class="row" style="gap:6px">
+            ${v.group_id && ['owner', 'manager'].includes(u.role)
+              ? `<button type="button" class="btn sm ${u.group_id ? 'green' : ''}" data-jefe="${u.id}" data-on="${u.group_id ? 1 : 0}">${u.group_id ? 'Es jefe del grupo' : 'Hacer jefe del grupo'}</button>` : ''}
+            <button type="button" class="btn sm" data-pwd="${u.id}">Nueva contraseña</button>
+          </span>
+        </div>`).join('') || '<div class="muted" style="font-size:13px">Nadie todavía.</div>'}
+        <div class="help">Úsalo cuando llamen diciendo que no pueden entrar. Se cierran sus sesiones abiertas
+        y hay que darles la contraseña nueva por un canal donde sepas quién está al otro lado.</div></fieldset>
       <div class="fse">Carta pública: <a href="/m/${esc(v.slug)}" target="_blank">/m/${esc(v.slug)}</a> · alta ${fmtDate(v.created_at)}</div>` });
+    $$('[data-jefe]', body).forEach((btn) => btn.onclick = async () => {
+      const quitar = btn.dataset.on === '1';
+      await api(`/api/admin/users/${btn.dataset.jefe}/group`, { method: 'POST', body: { group_id: quitar ? null : v.group_id } });
+      toast(quitar ? 'Ya no lleva el grupo.' : 'Ahora ve todos los locales de la marca.', 'ok');
+      btn.dataset.on = quitar ? '0' : '1';
+      btn.textContent = quitar ? 'Hacer jefe del grupo' : 'Es jefe del grupo';
+      btn.classList.toggle('green', !quitar);
+    });
+    $$('[data-pwd]', body).forEach((btn) => btn.onclick = async () => {
+      const nueva = prompt('Contraseña nueva (mínimo 8 caracteres):');
+      if (!nueva) return;
+      try {
+        await api(`/api/admin/users/${btn.dataset.pwd}/password`, { method: 'POST', body: { password: nueva } });
+        toast('Contraseña cambiada. Pásasela por WhatsApp, no por email.', 'ok');
+      } catch (err) { toast(err.message, 'err'); }
+    });
     const saved = await modal({ title: v.name, body, onSave: (r) => api(`/api/admin/venues/${v.id}`, { method: 'PATCH', body: {
       plan: r.querySelector('#plan').value, status: r.querySelector('#status').value,
       is_pilot: r.querySelector('#pilot').checked,
       is_demo: r.querySelector('#demo').checked,
+      group_id: Number(r.querySelector('#grupo').value) || null,
       beta: Object.fromEntries([...r.querySelectorAll('[data-beta]')].map((c) => [c.dataset.beta, c.checked])),
       extend_trial_days: Number(r.querySelector('#ext').value) || undefined,
     } }) });
@@ -283,6 +328,44 @@ async function registro(view) {
       <td>${esc(r.venue_name || '—')}</td><td class="muted">${esc(r.user_email || '—')}</td>
       <td class="mono">${esc(r.action)}</td><td class="muted mono">${esc((r.meta || '').slice(0, 80))}</td></tr>`).join('')}
     </tbody></table></div>`;
+}
+
+/** Copias de seguridad: lo único que separa un disco roto de perder la carta de un bar. */
+async function sistema(view) {
+  const copias = await api('/api/admin/backups');
+  const peso = (b) => `${(b / 1024).toFixed(0)} KB`;
+  view.innerHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-head"><h3 style="margin:0">Copias de seguridad</h3>
+        <button class="btn primary sm" id="copiar">Hacer una copia ahora</button></div>
+      <p class="muted" style="font-size:13.5px;margin-top:0">Se hace una sola al arrancar el servidor y otra cada 24 horas.
+      Se guardan las 14 últimas. <strong>Descarga una de vez en cuando</strong>: una copia que vive en el mismo
+      disco que la base no sirve de nada el día que el disco falle.</p>
+      ${copias.length ? `<table>
+        <thead><tr><th>Copia</th><th>Cuándo</th><th class="num">Tamaño</th><th></th></tr></thead>
+        <tbody>${copias.map((c) => `<tr>
+          <td class="mono">${esc(c.name)}</td>
+          <td class="muted">${fmtDate(c.at)}</td>
+          <td class="num">${peso(c.size)}</td>
+          <td class="right"><a class="btn sm" href="/api/admin/backups/${encodeURIComponent(c.name)}">Descargar</a></td>
+        </tr>`).join('')}</tbody></table>`
+        : '<div class="empty">Todavía no hay ninguna copia.</div>'}
+    </div>
+    <div class="card">
+      <h3>Restablecer una contraseña</h3>
+      <p class="muted" style="font-size:13.5px;margin-top:0">No hay recuperación por correo a propósito: el soporte va por
+      WhatsApp y la contraseña la pone una persona de Maitre, que es quien comprueba con quién está hablando.
+      Se hace desde <strong>Locales → Gestionar → Personas con acceso</strong>.</p>
+      <a class="btn" href="#" id="ir-locales">Ir a Locales</a>
+    </div>`;
+  $('#copiar').onclick = async (e) => {
+    await ocupado(e.target, async () => {
+      const r = await api('/api/admin/backups', { method: 'POST' });
+      toast(`Copia hecha: ${r.name}`, 'ok');
+    });
+    paint();
+  };
+  $('#ir-locales').onclick = (e) => { e.preventDefault(); $$('.tabs button').find((b) => b.dataset.tab === 'locales').click(); };
 }
 
 try { const me = await api('/api/auth/me'); if (me.user.role !== 'superadmin') location.href = '/panel'; }

@@ -157,6 +157,9 @@ function render() {
 
     <main>
       ${d.preview && self === top ? `<div class="notice info" style="margin:14px 0">Estás viendo la carta de escaparate. Escanea el QR de tu mesa para pedir.</div>` : ''}
+      ${d.gate?.closed_now
+        ? `<div class="notice warn" style="margin:14px 0">Ahora mismo no se puede pedir desde el móvil.
+           El servicio es de <strong>${esc(d.gate.hours)}</strong>. La carta la puedes mirar igual.</div>` : ''}
       ${d.table && d.can_order && d.gate?.mode === 'occupied' && !d.gate.table_open
         ? `<div class="notice warn" style="margin:14px 0">Puedes mirar la carta con calma. Para pedir desde el móvil,
            el personal tiene que abrir la mesa: avísales y listo.</div>` : ''}

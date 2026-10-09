@@ -79,6 +79,17 @@ export function loader(msg = 'Poniendo la cafetera…') {
 }
 
 /** Escapa texto para interpolarlo en HTML. */
+// --- Soporte -----------------------------------------------------------------
+// El soporte de Maitre va por WhatsApp, no por formulario: un bar en hora punta no
+// rellena un ticket, manda un audio. El enlace lleva el contexto ya escrito para que
+// no tengan que explicar quiénes son.
+export const SOPORTE_TEL = '34618218289';
+
+export function soporteUrl(contexto = '') {
+  const texto = `Hola, soy de ${contexto || 'un local con Maitre'}. Necesito ayuda con:`;
+  return `https://wa.me/${SOPORTE_TEL}?text=${encodeURIComponent(texto)}`;
+}
+
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

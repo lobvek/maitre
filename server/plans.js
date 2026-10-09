@@ -12,8 +12,11 @@ const MESA = ['menu', 'qr', 'calls', 'orders', 'modifiers', 'staff_basic'];
 // Servicio: la sala completa — barra/cocina, comandas, agotados, mesas, roles, analítica y reseñas.
 const SERVICIO = [...MESA, 'kds', 'upsell', 'staff', 'tables', 'export', 'analytics', 'reviews'];
 
+// Grupo: varios locales de una misma marca. El jefe entra en todos; cada local ve el suyo.
+const GRUPO = [...SERVICIO, 'multi_venue'];
+
 /** Construido pero aún no vendible. Se activa por local desde la consola de Maitre. */
-export const ROADMAP = ['integrations', 'payments', 'multi_venue'];
+export const ROADMAP = ['integrations', 'payments'];
 
 export const PLANS = {
   trial: {
@@ -40,6 +43,18 @@ export const PLANS = {
     max_tables: 80,
     features: SERVICIO,
     highlight: true,
+  },
+  grupo: {
+    id: 'grupo',
+    name: 'Grupo',
+    // Precio POR LOCAL. Sale más barato que Servicio porque la visita, la formación y
+    // el soporte se hacen una vez para toda la marca, no local por local.
+    price_cents: 2900,
+    tagline: 'Para marcas con cinco locales o más: todo lo de Servicio y una cuenta que los ve todos',
+    max_tables: 80,
+    features: GRUPO,
+    min_venues: 5,
+    invite_only: true,   // se negocia con la marca; no se contrata desde el panel
   },
   founders: {
     id: 'founders',

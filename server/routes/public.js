@@ -34,9 +34,27 @@ function resolve(req, res, next) {
  *  - open     cualquiera con el QR (el más cómodo, el menos protegido)
  *  - occupied solo si el personal ha marcado la mesa como ocupada al sentar a los clientes
  *  - code     hay que teclear el código del turno, que el personal ve en la pantalla de sala
+ *
+ * Y, por encima de todas, el horario: fuera de las horas de servicio no se pide. No cuesta
+ * nada al personal y se lleva por delante el caso de quien guardó la foto del QR y prueba
+ * a pedir desde el sofá un martes a las tres de la mañana.
  */
+export function fueraDeHorario(venue, ahora = new Date()) {
+  const desde = (venue.order_from || '').trim();
+  const hasta = (venue.order_to || '').trim();
+  if (!/^\d{2}:\d{2}$/.test(desde) || !/^\d{2}:\d{2}$/.test(hasta) || desde === hasta) return false;
+  const min = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const n = ahora.getHours() * 60 + ahora.getMinutes();
+  const a = min(desde); const b = min(hasta);
+  // Si cierra antes de abrir, el turno cruza la medianoche (20:00 → 02:00).
+  return a < b ? (n < a || n >= b) : (n < a && n >= b);
+}
+
 function checkGate(venue, table, body) {
   const gate = venue.order_gate || 'open';
+  if (fueraDeHorario(venue)) {
+    return { error: `Ahora mismo no se pueden hacer pedidos. El servicio es de ${venue.order_from} a ${venue.order_to}.`, code: 'closed_now' };
+  }
   if (gate === 'occupied' && table.status !== 'occupied') {
     return { error: 'Esta mesa aún no está abierta. Avisa al personal y te la abren en un segundo.', code: 'table_closed' };
   }
@@ -131,9 +149,11 @@ router.get('/:slug/:token', resolve, (req, res) => {
     categories,
     items,
     catalog: { allergens: ALLERGENS, tags: TAGS },
-    can_order: !!req.pubTable && hasFeature(venue, 'orders') && toggles.orders !== false,
+    can_order: !!req.pubTable && hasFeature(venue, 'orders') && toggles.orders !== false && !fueraDeHorario(venue),
     gate: {
       mode: venue.order_gate || 'open',
+      closed_now: fueraDeHorario(venue),
+      hours: venue.order_from && venue.order_to ? `${venue.order_from}–${venue.order_to}` : '',
       needs_code: (venue.order_gate === 'code') && !!venue.order_code,
       table_open: req.pubTable ? req.pubTable.status === 'occupied' : false,
     },

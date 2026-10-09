@@ -46,6 +46,13 @@ router.patch('/', requireRole('manager'), (req, res) => {
     patch.payment_mode = req.body.payment_mode;
   }
   if (req.body.payment_account !== undefined) patch.payment_account = String(req.body.payment_account).slice(0, 80);
+  // Horario de pedidos. Vacío en los dos = siempre abierto.
+  for (const campo of ['order_from', 'order_to']) {
+    if (req.body[campo] === undefined) continue;
+    const v = String(req.body[campo]).trim();
+    if (v && !/^\d{2}:\d{2}$/.test(v)) return bad(res, 'La hora va en formato 20:00.');
+    patch[campo] = v;
+  }
   if (req.body.order_gate !== undefined) {
     if (!['open', 'occupied', 'code'].includes(req.body.order_gate)) return bad(res, 'Modo de acceso no válido.');
     patch.order_gate = req.body.order_gate;

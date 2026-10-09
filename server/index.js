@@ -50,6 +50,9 @@ export function createApp() {
   app.get('/api/health', (_req, res) => res.json({
     ok: true,
     venues: get('SELECT COUNT(*) AS n FROM venues').n,
+    // Si hay locales de muestra, esto es un despliegue de demostración: la pantalla
+    // de entrada enseña las cuentas de prueba. En un bar de verdad, nunca.
+    demo: !!get('SELECT id FROM venues WHERE is_demo = 1 LIMIT 1'),
     orders: get('SELECT COUNT(*) AS n FROM orders').n,
     uptime: Math.round(process.uptime()),
   }));
@@ -161,6 +164,8 @@ if (isMain) {
     await import('./seed.js');
   }
   await bootstrapAdmin();
+  const { startBackups } = await import('./backup.js');
+  startBackups();
   app.listen(port, () => {
     console.log(`\n  Maitre en marcha  →  http://localhost:${port}`);
     console.log(`  Panel del local   →  http://localhost:${port}/panel`);

@@ -243,12 +243,40 @@ El detalle, con ejemplo de carga útil y verificación de firma, está en [`docs
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | se generan en `data/vapid.json` | Claves de las notificaciones push al móvil del personal |
 | `MAITRE_TELEGRAM_BOT_TOKEN` | — | Token del bot de Maitre para avisar por Telegram a los grupos de los locales |
 | `MAITRE_ADMIN_EMAIL` / `MAITRE_ADMIN_PASSWORD` / `MAITRE_ADMIN_NAME` | — | Cuenta de operador que se crea en el primer arranque con la base vacía. Si ya existe, no se toca |
+| `MAITRE_BACKUP_KEEP` | `14` | Cuántas copias de seguridad se conservan |
 | `NODE_ENV` | — | Con `production` la cookie de sesión exige HTTPS |
+
+## Copias de seguridad
+
+El servidor hace una copia al arrancar y otra cada 24 horas en `data/backups/`, con `VACUUM INTO`
+(una copia consistente aunque haya escrituras a la vez). Se conservan las 14 últimas.
+
+Desde la consola de operador, pestaña **Sistema**, se pueden listar, forzar una y **descargarlas**.
+Descargar es la parte importante: una copia que vive en el mismo disco que la base no sirve de nada
+el día que falle el disco.
+
+Las imágenes subidas (`data/uploads/`) no entran en esa copia; van con el disco de Render.
+
+## Contraseñas y soporte
+
+No hay recuperación por correo, a propósito: el soporte va por WhatsApp y la contraseña la
+restablece una persona de Maitre desde **Locales → Gestionar → Personas con acceso**, que es quien
+comprueba con quién está hablando. Al cambiarla se cierran las sesiones abiertas de esa persona.
+
+El número de soporte está en `public/js/core.js` (`SOPORTE_TEL`), y los botones de ayuda del panel
+y de la sala abren WhatsApp con el nombre del local ya escrito.
+
+## Grupos de locales (franquicias)
+
+Una marca con varios locales se monta desde la consola de operador: *Locales → + Grupo*, se asigna
+cada local al grupo y se marca a una persona como **jefe del grupo**. Esa persona entra en todos los
+locales de su marca desde el selector de la barra lateral y tiene una sección *Mis locales* que los
+compara. Cada local sigue viendo solo el suyo. El plan Grupo son 29 € por local a partir de cinco.
 
 ## Antes de poner esto en producción
 
 1. Servir detrás de HTTPS y fijar `NODE_ENV=production` y `PUBLIC_URL`.
 2. Conectar la pasarela real (`PAYMENTS_PROVIDER`), con una cuenta por local, y activar el ciclo de
    renovación de las suscripciones. Ojo al coste por transacción: en tickets pequeños pesa mucho.
-3. Copia de seguridad periódica de `data/` (base de datos e imágenes) y monitorización.
+3. Llevarse las copias de seguridad fuera del servidor cada cierto tiempo.
 4. Firmar el contrato de encargo del tratamiento con cada establecimiento.

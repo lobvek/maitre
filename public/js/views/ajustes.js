@@ -91,6 +91,13 @@ export async function render(root) {
           <option value="occupied" ${v.order_gate === 'occupied' ? 'selected' : ''}>Solo si el personal ha abierto la mesa</option>
           <option value="code" ${v.order_gate === 'code' ? 'selected' : ''}>Hay que teclear el código del turno</option>
         </select>
+        <div class="field-row">
+          <div class="field"><label>Se puede pedir desde</label><input id="order_from" type="time" value="${esc(v.order_from || '')}"></div>
+          <div class="field"><label>Hasta</label><input id="order_to" type="time" value="${esc(v.order_to || '')}"></div>
+        </div>
+        <div class="help">Déjalo en blanco si no quieres horario. Es la defensa que no cuesta trabajo a nadie:
+        fuera de esas horas la carta se ve, pero no se puede pedir. Si cierras de madrugada, pon por ejemplo
+        de 08:00 a 02:00 y lo entiende.</div>
         <div class="help">El QR de la cuña es fijo: quien le haga una foto podría pedir desde casa.
         Si cobras antes de enviar el pedido el problema casi desaparece; si no, abre la mesa al sentar a los
         clientes o usa el código, que el personal ve en la pantalla de sala.
@@ -165,6 +172,8 @@ export async function render(root) {
       body.tax_rate = Number($('#tax_rate').value);
       body.payment_mode = $('#payment_mode').value;
       body.order_gate = $('#order_gate').value;
+      body.order_from = $('#order_from').value;
+      body.order_to = $('#order_to').value;
       if (!$('#telegram_chat_id').disabled) body.telegram_chat_id = $('#telegram_chat_id').value.trim();
       if (!$('#webhook_url').disabled) body.webhook_url = $('#webhook_url').value.trim();
       if ($('#payment_account')) body.payment_account = $('#payment_account').value;

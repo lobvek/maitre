@@ -49,13 +49,18 @@ export function loadUser(req, _res, next) {
   const t = req.cookies?.[COOKIE];
   if (t) {
     const row = get(
-      `SELECT u.*, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id
+      `SELECT u.*, s.expires_at, s.active_venue_id FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires_at > datetime('now') AND u.active = 1`, t);
     if (row) {
-      const { password_hash, expires_at, ...user } = row;
+      const { password_hash, expires_at, active_venue_id, ...user } = row;
       req.user = user;
       req.sessionToken = t;
-      if (user.venue_id) req.venue = get('SELECT * FROM venues WHERE id = ?', user.venue_id);
+      // Quien manda en un grupo de locales puede estar mirando cualquiera de ellos.
+      // El local activo vive en la sesión; si no cuadra, se cae al local de casa.
+      if (user.group_id && active_venue_id) {
+        req.venue = get('SELECT * FROM venues WHERE id = ? AND group_id = ?', active_venue_id, user.group_id);
+      }
+      if (!req.venue && user.venue_id) req.venue = get('SELECT * FROM venues WHERE id = ?', user.venue_id);
     }
   }
   next();

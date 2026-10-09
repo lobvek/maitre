@@ -123,3 +123,39 @@ router.get('/margins', (req, res) => {
       profit_cents: (r.price_cents - (r.cost_cents || 0)) * r.qty,
     })));
 });
+
+/**
+ * GET /api/analytics/group — la foto de toda la marca, local a local.
+ * Es lo que pide el jefe de una franquicia: no el detalle de un bar, sino cuál va bien
+ * y cuál se ha quedado atrás esta semana.
+ */
+router.get('/group', (req, res) => {
+  if (!req.user.group_id) return res.status(403).json({ error: 'forbidden', message: 'Esta cuenta no lleva un grupo.' });
+  const [from, to] = range(req);
+  const locales = all('SELECT id, name, city FROM venues WHERE group_id = ? ORDER BY name', req.user.group_id);
+  const filas = locales.map((v) => {
+    const k = get(`SELECT COUNT(*) AS orders, COALESCE(SUM(total_cents),0) AS revenue_cents
+                   FROM orders WHERE venue_id = ? AND ${PAID} AND date(created_at) BETWEEN ? AND ?`, v.id, from, to);
+    const qr = get(`SELECT COUNT(*) AS n FROM orders WHERE venue_id = ? AND channel = 'qr' AND ${PAID}
+                    AND date(created_at) BETWEEN ? AND ?`, v.id, from, to).n;
+    const esperas = get(`SELECT AVG((julianday(accepted_at) - julianday(created_at)) * 1440) AS m
+                         FROM orders WHERE venue_id = ? AND accepted_at IS NOT NULL
+                         AND date(created_at) BETWEEN ? AND ?`, v.id, from, to).m;
+    return {
+      ...v,
+      orders: k.orders,
+      revenue_cents: k.revenue_cents,
+      avg_ticket_cents: k.orders ? Math.round(k.revenue_cents / k.orders) : 0,
+      qr_pct: k.orders ? Math.round((qr / k.orders) * 100) : 0,
+      accept_minutes: esperas === null ? null : Math.round(esperas * 10) / 10,
+    };
+  });
+  res.json({
+    range: { from, to },
+    venues: filas,
+    total: {
+      orders: filas.reduce((n, f) => n + f.orders, 0),
+      revenue_cents: filas.reduce((n, f) => n + f.revenue_cents, 0),
+    },
+  });
+});

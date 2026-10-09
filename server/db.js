@@ -54,6 +54,13 @@ CREATE TABLE IF NOT EXISTS venues (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Grupos de locales (franquicias y cadenas): un jefe ve todos, cada local el suyo.
+CREATE TABLE IF NOT EXISTS venue_groups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   venue_id INTEGER REFERENCES venues(id) ON DELETE CASCADE,
@@ -309,6 +316,15 @@ const MIGRATIONS = [
   ['orders', 'claimed_name', "TEXT DEFAULT ''"],
   ['orders', 'claimed_at', 'TEXT'],
   ['venues', 'is_demo', 'INTEGER NOT NULL DEFAULT 0'],
+  // Franquicias: el local pertenece a un grupo, el jefe del grupo entra en todos
+  // y la sesión recuerda en cuál está mirando ahora mismo.
+  ['venues', 'group_id', 'INTEGER'],
+  ['users', 'group_id', 'INTEGER'],
+  ['sessions', 'active_venue_id', 'INTEGER'],
+  // Horario en el que se aceptan pedidos. Vacío = siempre. Es la defensa contra
+  // la foto del QR que no obliga al camarero a abrir y cerrar mesas.
+  ['venues', 'order_from', "TEXT DEFAULT ''"],
+  ['venues', 'order_to', "TEXT DEFAULT ''"],
 ];
 
 function migrate(database) {

@@ -8,6 +8,8 @@ import { makeQrCode } from '../db.js';
 import { PLANS, effectivePlan } from '../plans.js';
 import { pilotReport } from '../pilot.js';
 import { bad, ok, nowSql } from '../utils.js';
+import { backupNow, listBackups, BACKUP_DIR } from '../backup.js';
+import { resolve } from 'node:path';
 
 export const router = Router();
 router.use(requireAuth, requireSuperadmin);
@@ -76,7 +78,12 @@ router.patch('/venues/:id', (req, res) => {
     for (const [k, on] of Object.entries(req.body.beta)) f[`beta_${k}`] = !!on;
     patch.features = JSON.stringify(f);
   }
-  if (req.body.plan && ['trial', 'mesa', 'servicio', 'founders', 'paused'].includes(req.body.plan)) {
+  if (req.body.group_id !== undefined) {
+    const gid = Number(req.body.group_id) || null;
+    if (gid && !get('SELECT id FROM venue_groups WHERE id = ?', gid)) return bad(res, 'Ese grupo no existe.');
+    patch.group_id = gid;
+  }
+  if (req.body.plan && ['trial', 'mesa', 'servicio', 'grupo', 'founders', 'paused'].includes(req.body.plan)) {
     patch.plan = req.body.plan;
     patch.plan_since = nowSql();
     // Fundadores: plan Servicio a 19 € durante 24 meses; después pasa al precio público.
@@ -154,4 +161,72 @@ router.get('/audit', (_req, res) => {
   res.json(all(`SELECT a.*, v.name AS venue_name, u.email AS user_email FROM audit_log a
                 LEFT JOIN venues v ON v.id = a.venue_id LEFT JOIN users u ON u.id = a.user_id
                 ORDER BY a.id DESC LIMIT 300`));
+});
+
+// --- Copias de seguridad -----------------------------------------------------
+// Se hacen solas cada día; esto es para mirarlas, forzar una antes de tocar algo
+// y poder descargarse el fichero a un sitio que no sea el servidor.
+router.get('/backups', (_req, res) => res.json(listBackups()));
+
+router.post('/backups', (req, res) => {
+  try {
+    const name = backupNow();
+    audit(null, req.user.id, 'backup.manual', 'backup', name);
+    res.json({ ok: true, name });
+  } catch (err) { bad(res, `No se pudo hacer la copia: ${err.message}`, 500); }
+});
+
+router.get('/backups/:name', (req, res) => {
+  const name = String(req.params.name);
+  // Solo nombres que hayamos generado nosotros: ni rutas ni sorpresas.
+  if (!/^maitre-[0-9T:-]+\.db$/.test(name)) return bad(res, 'Nombre no válido.', 400);
+  if (!listBackups().some((b) => b.name === name)) return bad(res, 'Esa copia ya no está.', 404);
+  res.download(resolve(BACKUP_DIR, name));
+});
+
+// --- Contraseñas -------------------------------------------------------------
+// No hay recuperación por correo: el soporte va por WhatsApp y la contraseña la
+// restablece una persona de Maitre, que es quien comprueba con quién habla.
+router.post('/users/:id/password', (req, res) => {
+  const u = get('SELECT * FROM users WHERE id = ?', Number(req.params.id));
+  if (!u) return bad(res, 'Usuario no encontrado.', 404);
+  const nueva = String(req.body.password || '');
+  if (nueva.length < 8) return bad(res, 'La contraseña necesita 8 caracteres como mínimo.');
+  update('users', u.id, { password_hash: hashPassword(nueva) });
+  run('DELETE FROM sessions WHERE user_id = ?', u.id);   // se cierran sus sesiones abiertas
+  audit(u.venue_id, req.user.id, 'user.password_reset', 'user', u.id);
+  ok(res);
+});
+
+router.get('/venues/:id/users', (req, res) => {
+  res.json(all('SELECT id, email, name, role, active, group_id, last_login_at FROM users WHERE venue_id = ? ORDER BY id', Number(req.params.id)));
+});
+
+// --- Grupos de locales (franquicias) ----------------------------------------
+router.get('/groups', (_req, res) => {
+  res.json(all(`SELECT g.*, COUNT(v.id) AS venues,
+                  (SELECT COUNT(*) FROM users u WHERE u.group_id = g.id) AS bosses
+                FROM venue_groups g LEFT JOIN venues v ON v.group_id = g.id
+                GROUP BY g.id ORDER BY g.name`));
+});
+
+router.post('/groups', (req, res) => {
+  const name = String(req.body.name || '').trim();
+  if (name.length < 2) return bad(res, 'Ponle nombre al grupo.');
+  const id = insert('venue_groups', { name });
+  audit(null, req.user.id, 'admin.group_created', 'group', id, { name });
+  res.json(get('SELECT * FROM venue_groups WHERE id = ?', id));
+});
+
+/** Da (o quita) a una persona el mando sobre todos los locales de un grupo. */
+router.post('/users/:id/group', (req, res) => {
+  const u = get('SELECT * FROM users WHERE id = ?', Number(req.params.id));
+  if (!u) return bad(res, 'Usuario no encontrado.', 404);
+  const gid = Number(req.body.group_id) || null;
+  if (gid && !get('SELECT id FROM venue_groups WHERE id = ?', gid)) return bad(res, 'Ese grupo no existe.');
+  if (gid && !['owner', 'manager'].includes(u.role)) return bad(res, 'Solo un propietario o un encargado puede llevar un grupo.');
+  update('users', u.id, { group_id: gid });
+  run('UPDATE sessions SET active_venue_id = NULL WHERE user_id = ?', u.id);
+  audit(u.venue_id, req.user.id, 'admin.user_group', 'user', u.id, { group_id: gid });
+  ok(res);
 });

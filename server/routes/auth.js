@@ -89,6 +89,29 @@ router.post('/login', (req, res) => {
 
 router.post('/logout', (req, res) => { destroySession(req, res); ok(res); });
 
+/** El grupo de locales de una persona, o null si solo tiene el suyo. */
+function grupoDe(user) {
+  if (!user?.group_id) return null;
+  const g = get('SELECT * FROM venue_groups WHERE id = ?', user.group_id);
+  if (!g) return null;
+  return {
+    id: g.id,
+    name: g.name,
+    venues: all('SELECT id, name, city, slug FROM venues WHERE group_id = ? ORDER BY name', g.id),
+  };
+}
+
+/** POST /api/auth/venue — el jefe del grupo cambia de local sin volver a entrar. */
+router.post('/venue', requireAuth, (req, res) => {
+  if (!req.user.group_id) return bad(res, 'Esta cuenta solo tiene un local.', 403);
+  const id = Number(req.body?.venue_id);
+  const v = get('SELECT * FROM venues WHERE id = ? AND group_id = ?', id, req.user.group_id);
+  if (!v) return bad(res, 'Ese local no es de tu grupo.', 403);
+  run('UPDATE sessions SET active_venue_id = ? WHERE token = ?', v.id, req.sessionToken);
+  audit(v.id, req.user.id, 'auth.venue_switch', 'venue', v.id);
+  ok(res, { venue: publicVenue(v) });
+});
+
 /** GET /api/auth/me — estado de sesión para el front. */
 router.get('/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'unauthorized' });
@@ -96,6 +119,8 @@ router.get('/me', (req, res) => {
     user: req.user,
     venue: publicVenue(req.venue),
     plans: Object.values(PLANS).filter((p) => p.id !== 'paused'),
+    // Franquicias: los locales entre los que puede moverse esta persona.
+    group: grupoDe(req.user),
   });
 });
 

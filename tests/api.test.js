@@ -572,7 +572,9 @@ describe('arquitectura de precios del estudio', () => {
     const f = await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'founders' } });
     assert.equal(f.status, 400);
     const b = await srv.request('/api/billing');
-    assert.deepEqual(b.data.plans.map((p) => p.id), ['mesa', 'servicio', 'founders']);
+    assert.deepEqual(b.data.plans.map((p) => p.id), ['mesa', 'servicio', 'grupo', 'founders']);
+    const g = await srv.request('/api/billing/plan', { method: 'POST', body: { plan: 'grupo' } });
+    assert.equal(g.status, 400, 'el plan de grupo se negocia, no se contrata solo');
     assert.ok(b.data.plans.find((p) => p.id === 'mesa').features.includes('orders'));
     assert.ok(!b.data.plans.find((p) => p.id === 'mesa').features.includes('analytics'));
     assert.equal(b.data.plans.find((p) => p.id === 'servicio').price_cents, 3900);
@@ -791,5 +793,99 @@ describe('locales de muestra y locales de verdad', () => {
     await srv.request(`/api/admin/venues/${nuevo.data.id}`, { method: 'PATCH', body: { is_demo: true } });
     const sinDemo = (await srv.request('/api/admin/overview')).data.kpis.mrr_cents;
     assert.equal(conPago - sinDemo, 3900, 'al marcarlo de muestra deja de contar');
+  });
+});
+
+describe('franquicias: un grupo de locales', () => {
+  /** Entra como superadmin para hacer lo que solo hace Maitre, y devuelve la sesión. */
+  async function comoOperador(fn) {
+    const { hashPassword } = await import('../server/auth.js');
+    const { insert, get } = await import('../server/db.js');
+    const correo = 'grupo-op@maitre.test';
+    if (!get('SELECT id FROM users WHERE email = ?', correo)) {
+      insert('users', { venue_id: null, email: correo, password_hash: hashPassword('contrasena123'), name: 'Op', role: 'superadmin' });
+    }
+    const antes = srv.jar.cookie;
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: correo, password: 'contrasena123' } });
+    const r = await fn();
+    srv.jar.cookie = antes;
+    return r;
+  }
+
+  test('el jefe ve sus locales y puede moverse entre ellos; un local ajeno no', async () => {
+    const a = await signup(srv.request, { venue_name: 'Pizzeria Centro', email: 'jefe@grupo.test' });
+    const b = await signup(srv.request, { venue_name: 'Pizzeria Norte', email: 'norte@grupo.test' });
+    const ajeno = await signup(srv.request, { venue_name: 'Bar Suelto', email: 'suelto@grupo.test' });
+
+    const grupo = await comoOperador(async () => {
+      const g = await srv.request('/api/admin/groups', { method: 'POST', body: { name: 'Pizzerias Bona' } });
+      for (const v of [a.data.venue.id, b.data.venue.id]) {
+        await srv.request(`/api/admin/venues/${v}`, { method: 'PATCH', body: { group_id: g.data.id, plan: 'grupo' } });
+      }
+      await srv.request(`/api/admin/users/${a.data.user.id}/group`, { method: 'POST', body: { group_id: g.data.id } });
+      return g.data;
+    });
+    assert.ok(grupo.id);
+
+    // El jefe entra: ve los dos locales de su marca.
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: 'jefe@grupo.test', password: 'contrasena123' } });
+    const me = await srv.request('/api/auth/me');
+    assert.equal(me.data.group.name, 'Pizzerias Bona');
+    assert.deepEqual(me.data.group.venues.map((v) => v.name).sort(), ['Pizzeria Centro', 'Pizzeria Norte']);
+    assert.equal(me.data.venue.id, a.data.venue.id, 'arranca en su local de casa');
+
+    // Cambia al otro local de la marca y el panel le sigue.
+    const sw = await srv.request('/api/auth/venue', { method: 'POST', body: { venue_id: b.data.venue.id } });
+    assert.equal(sw.status, 200);
+    assert.equal((await srv.request('/api/auth/me')).data.venue.id, b.data.venue.id);
+    assert.equal((await srv.request('/api/venue')).data.id, b.data.venue.id);
+
+    // Un local que no es de su grupo queda fuera, aunque sepa el número.
+    const fuera = await srv.request('/api/auth/venue', { method: 'POST', body: { venue_id: ajeno.data.venue.id } });
+    assert.equal(fuera.status, 403);
+    assert.equal((await srv.request('/api/auth/me')).data.venue.id, b.data.venue.id, 'sigue donde estaba');
+
+    // La foto de la marca suma los dos locales.
+    const g = await srv.request('/api/analytics/group');
+    assert.equal(g.status, 200);
+    assert.equal(g.data.venues.length, 2);
+
+    // Y un dueño normal no tiene grupo ni puede pedir la foto de nadie.
+    await srv.request('/api/auth/login', { method: 'POST', body: { email: 'suelto@grupo.test', password: 'contrasena123' } });
+    assert.equal((await srv.request('/api/auth/me')).data.group, null);
+    assert.equal((await srv.request('/api/analytics/group')).status, 403);
+  });
+});
+
+describe('fuera de horario no se pide', () => {
+  test('la carta se ve, pero el pedido se rechaza y el botón desaparece', async () => {
+    const { fueraDeHorario } = await import('../server/routes/public.js');
+    // La función, con horarios que cruzan la medianoche y sin horario.
+    const a = (h, m = 0) => new Date(2026, 0, 1, h, m);
+    assert.equal(fueraDeHorario({ order_from: '08:00', order_to: '23:00' }, a(12)), false);
+    assert.equal(fueraDeHorario({ order_from: '08:00', order_to: '23:00' }, a(3)), true);
+    assert.equal(fueraDeHorario({ order_from: '20:00', order_to: '02:00' }, a(1)), false, 'el turno cruza la medianoche');
+    assert.equal(fueraDeHorario({ order_from: '20:00', order_to: '02:00' }, a(12)), true);
+    assert.equal(fueraDeHorario({ order_from: '', order_to: '' }, a(4)), false, 'sin horario, siempre abierto');
+
+    // Y de punta a punta: un local cerrado ahora mismo no acepta el pedido.
+    const alta = await signup(srv.request, { venue_name: 'Bar Nocturno', email: 'noche@test.dev' });
+    const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: 'Bebidas' } });
+    const item = await srv.request('/api/menu/items', { method: 'POST', body: { category_id: cat.data.id, name: 'Caña', price_cents: 250 } });
+    const mesas = await srv.request('/api/tables');
+    const t = mesas.data.tables[0];
+    // Una franja de un minuto que ya pasó: para el servidor, está cerrado.
+    const antes = new Date(Date.now() - 120 * 60000);
+    const hh = String(antes.getHours()).padStart(2, '0');
+    await srv.request('/api/venue', { method: 'PATCH', body: { order_from: `${hh}:00`, order_to: `${hh}:01` } });
+
+    const url = `/api/public/${alta.data.venue.slug}/${t.token}`;
+    const carta = await srv.request(url, { cookies: false });
+    assert.equal(carta.data.can_order, false, 'el botón de pedir no sale');
+    assert.equal(carta.data.gate.closed_now, true);
+    const pedido = await srv.request(`${url}/order`, { method: 'POST', cookies: false, body: { items: [{ item_id: item.data.id, qty: 1 }] } });
+    assert.equal(pedido.status, 403);
+    assert.equal(pedido.data.error, 'closed_now');
+    assert.match(pedido.data.message, /no se pueden hacer pedidos/);
   });
 });

@@ -30,8 +30,11 @@
     <div id="err" class="notice err hidden" style="margin-bottom:14px"></div>
     <button class="btn primary block lg" id="go">Entrar</button>
     <p class="center muted" style="margin:16px 0 0;font-size:13.5px">¿Aún no tienes cuenta? <a href="/alta">Da de alta tu local</a></p>
+    <p class="center muted" style="margin:8px 0 0;font-size:13.5px">
+      ¿No puedes entrar? <a id="ayuda" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+      y te damos una contraseña nueva.</p>
   </form>
-  <div class="card flat" style="margin-top:16px;background:transparent">
+  <div class="card flat hidden" id="demo-box" style="margin-top:16px;background:transparent">
     <strong style="font-size:13px">Cuentas de demostración</strong>
     <div class="demo muted">
       <div><code data-u="ancora@maitre.app">ancora@maitre.app</code> — local Fundadores (piloto convertido)</div>
@@ -43,8 +46,11 @@
   </div>
 </div>
 <script type="module">
-import { api, $, $$ } from '/js/core.js';
+import { api, $, $$, soporteUrl } from '/js/core.js';
 const next = new URLSearchParams(location.search).get('next');
+$('#ayuda').href = soporteUrl('un local que no puede entrar en Maitre');
+// Las cuentas de prueba solo se enseñan donde hay locales de muestra.
+try { if ((await api('/api/health')).demo) $('#demo-box').classList.remove('hidden'); } catch { /* da igual */ }
 $$('[data-u]').forEach((c) => c.onclick = () => {
   $('#email').value = c.dataset.u; $('#password').value = 'maitre2026'; $('#go').focus();
 });

@@ -1,5 +1,5 @@
 // Pantalla de sala: pedidos en vivo, avisos del comensal y estado de mesas.
-import { api, money, esc, el, $, $$, toast, stream, modal, confirmDialog, icon, loader } from '/js/core.js';
+import { api, money, esc, el, $, $$, toast, stream, modal, confirmDialog, icon, loader, soporteUrl } from '/js/core.js';
 import { flip, haptic, ocupado, transicion } from '/js/motion.js';
 
 const state = {
@@ -469,6 +469,7 @@ function bindChrome() {
     if (state.sound) beep();
   };
   $('#sound').innerHTML = icon(state.sound ? 'sound-on' : 'sound-off');
+  $('#ayuda').href = soporteUrl(`${state.me.venue?.name || 'un local'}, desde la pantalla de sala`);
   $('#new-order').onclick = () => newOrder().catch((e) => toast(e.message, 'err'));
 }
 
