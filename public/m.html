@@ -63,6 +63,30 @@
     background: var(--line-2); aspect-ratio: 1; animation: fotoentra .5s var(--ease-out) both; }
   @keyframes fotoentra { from { opacity: 0; transform: scale(.96); } }
   .dish.out { opacity: .42; }
+  /* Botón de añadir directo: para una caña no hace falta abrir ninguna ficha.
+     48 px, que es un pulgar, y pegado al borde donde cae la mano. */
+  .dish-add { flex: none; align-self: center; width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--surface); color: var(--brand);
+    display: grid; place-items: center; cursor: pointer; box-shadow: var(--sh-1);
+    transition: transform var(--t-fast) var(--ease-micro), background var(--t-fast) var(--ease-micro); }
+  .dish-add:active { transform: scale(.88); background: var(--g-50); }
+  .dish-add .i { width: 20px; height: 20px; }
+  /* Filtros de dieta a la vista, no escondidos tras un botón: quien no come gluten
+     lo primero que hace es buscar dónde se filtra. */
+  .m-chips { display: flex; gap: 7px; overflow-x: auto; padding: 0 0 11px; scrollbar-width: none; }
+  .m-chips::-webkit-scrollbar { display: none; }
+  .m-chip { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px;
+    border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface);
+    font: 600 13px var(--sans); color: var(--ink-2); cursor: pointer; white-space: nowrap; min-height: 36px; }
+  .m-chip.on { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+  .m-chip .i { width: 15px; height: 15px; }
+  /* Repetir la última ronda: en un bar, la segunda ronda es el negocio. */
+  .ronda { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    background: var(--g-50); border: 1px solid var(--g-200); border-radius: var(--r-lg);
+    padding: 13px 15px; margin: 14px 0; cursor: pointer; font: inherit; color: inherit; }
+  .ronda:active { transform: scale(.985); }
+  .ronda .i { color: var(--brand); flex: none; }
+  .ronda small { display: block; color: var(--ink-3); font-size: 12.5px; font-weight: 500; }
   .alg { font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--ink-3);
     border: 1px solid var(--line); border-radius: 5px; padding: 2px 5px; }
   .badge-qty { background: var(--brand); color: var(--brand-ink); border-radius: var(--r-pill); min-width: 21px;

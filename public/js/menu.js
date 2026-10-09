@@ -152,6 +152,9 @@ function render() {
       </div>
       ${cats.length > 1 ? `<div class="m-cats">${cats.map((c) =>
         `<div class="m-cat ${c.id === state.activeCat ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}</div>`).join('')}</div>` : ''}
+      ${dietasUsadas().length ? `<div class="m-chips">${dietasUsadas().map((tg) =>
+        `<button class="m-chip ${state.diet === tg.id ? 'on' : ''}" data-chip="${tg.id}">${icon(tg.icon)}${esc(tg.label)}</button>`).join('')}
+        ${state.hideAllergens.length ? `<button class="m-chip on" data-chip-alg="1">${icon('ban')}${state.hideAllergens.length}</button>` : ''}</div>` : ''}
     </header>
 
     <main>
@@ -160,6 +163,7 @@ function render() {
         ? `<div class="notice warn" style="margin:14px 0">${t('closedNow', { h: esc(d.gate.hours) })}</div>` : ''}
       ${d.table && d.can_order && d.gate?.mode === 'occupied' && !d.gate.table_open
         ? `<div class="notice warn" style="margin:14px 0">${t('tableWait')}</div>` : ''}
+      ${rondaHtml()}
       ${activeOrdersHtml()}
       ${body || `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-search"/></svg></span>${t('noMatch')}</div>`}
       ${uncategorised.length ? `<h2 class="cat-title">${t('others')}</h2>${uncategorised.map(dishHtml).join('')}` : ''}
@@ -183,6 +187,35 @@ function render() {
     </div>` : ''}`;
 
   bind();
+}
+
+/** Solo las dietas que de verdad usa esta carta: tres chips, no seis vacíos. */
+function dietasUsadas() {
+  const usadas = new Set();
+  for (const i of state.data.items) for (const tg of i.tags) usadas.add(tg);
+  return state.data.catalog.tags.filter((tg) => usadas.has(tg.id));
+}
+
+/**
+ * «Otra ronda»: repite lo del último pedido de esta mesa de un toque.
+ * En un bar la segunda ronda es el negocio, y pedirla es justo cuando el camarero
+ * está más liado. Un botón, no diez toques.
+ */
+function rondaHtml() {
+  const ultimo = ultimaRonda();
+  if (!ultimo || state.cart.length) return '';
+  const resumen = ultimo.items.map((li) => `${li.qty}× ${li.name}`).join(', ');
+  return `<button class="ronda" id="otra-ronda">
+    ${icon('refresh', 'i-lg')}
+    <span class="grow"><strong>${t('again')}</strong>
+      <small>${esc(resumen.length > 60 ? `${resumen.slice(0, 58)}…` : resumen)}</small></span>
+    ${icon('right')}</button>`;
+}
+
+/** El último pedido de esta mesa que todavía se puede repetir. */
+function ultimaRonda() {
+  const previos = state.orders.filter((o) => o.status !== 'cancelled' && o.items?.length);
+  return previos[previos.length - 1] || null;
 }
 
 function dishHtml(i) {
@@ -209,6 +242,8 @@ function dishHtml(i) {
       </div>
     </div>
     ${i.image_path ? `<img class="dish-img" src="${esc(i.image_path)}" alt="" loading="lazy">` : ''}
+    ${state.data.can_order && i.available && !i.option_groups.length
+      ? `<button class="dish-add" data-quick="${i.id}" aria-label="${t('add')} ${esc(i.name)}">${icon('plus')}</button>` : ''}
   </div>`;
 }
 
@@ -277,6 +312,43 @@ function bind() {
     document.querySelectorAll('.m-cat').forEach((x) => x.classList.toggle('on', x === c));
   });
   document.querySelectorAll('.dish').forEach((el2) => el2.onclick = () => openDish(Number(el2.dataset.item)));
+
+  // Añadir sin abrir la ficha. Solo para lo que no tiene opciones que elegir.
+  document.querySelectorAll('[data-quick]').forEach((b) => b.onclick = (e) => {
+    e.stopPropagation();
+    const i = d.items.find((x) => x.id === Number(b.dataset.quick));
+    if (!i) return;
+    const linea = state.cart.find((l) => l.item_id === i.id && !l.option_ids.length && !l.note);
+    if (linea) linea.qty += 1;
+    else state.cart.push({ item_id: i.id, name: i.name, qty: 1, unit: i.price_cents, option_ids: [], option_names: [], note: '' });
+    saveCart(); haptic(14);
+    volarAlCarrito(b, $('#btn-cart'));
+    // Se repinta después del vuelo para que el punto salga del sitio correcto.
+    setTimeout(render, 180);
+  });
+
+  // Filtros de dieta desde la cabecera, sin abrir nada.
+  document.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => {
+    state.diet = state.diet === b.dataset.chip ? null : b.dataset.chip;
+    haptic(8); render();
+  });
+  $('[data-chip-alg]') && ($('[data-chip-alg]').onclick = openFilters);
+
+  $('#otra-ronda') && ($('#otra-ronda').onclick = () => {
+    const ultimo = ultimaRonda();
+    if (!ultimo) return;
+    for (const li of ultimo.items) {
+      const i = d.items.find((x) => x.id === li.item_id);
+      if (!i || !i.available) continue;
+      state.cart.push({
+        item_id: i.id, name: i.name, qty: li.qty, unit: i.price_cents,
+        option_ids: (li.options || []).map((o) => o.id),
+        option_names: (li.options || []).map((o) => o.name),
+        note: '',
+      });
+    }
+    saveCart(); haptic(18); render(); openCart();
+  });
   $('#btn-cart') && ($('#btn-cart').onclick = openCart);
   $('#btn-call') && ($('#btn-call').onclick = openCall);
   $('#btn-bill') && ($('#btn-bill').onclick = openBill);
