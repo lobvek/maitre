@@ -889,3 +889,46 @@ describe('fuera de horario no se pide', () => {
     assert.match(pedido.data.message, /no se pueden hacer pedidos/);
   });
 });
+
+describe('la carta en varios idiomas', () => {
+  test('la interfaz y los alérgenos cambian de idioma, y el panel dice qué falta', async () => {
+    const alta = await signup(srv.request, { venue_name: 'Bar Idiomas', email: 'idiomas@test.dev' });
+    await srv.request('/api/venue', { method: 'PATCH', body: { languages: ['es', 'en', 'de'] } });
+    const cat = await srv.request('/api/menu/categories', { method: 'POST', body: { name: { es: 'Tapas', en: 'Small plates' } } });
+    await srv.request('/api/menu/items', { method: 'POST', body: {
+      category_id: cat.data.id, name: { es: 'Pan con tomate' }, description: { es: 'Con aceite de Siurana' },
+      price_cents: 350, allergens: ['gluten', 'milk'],
+    } });
+    const t = (await srv.request('/api/tables')).data.tables[0];
+    const url = `/api/public/${alta.data.venue.slug}/${t.token}`;
+
+    // Los alérgenos son obligación legal: tienen que ir en el idioma que lee el comensal.
+    const es = await srv.request(`${url}?lang=es`, { cookies: false });
+    const en = await srv.request(`${url}?lang=en`, { cookies: false });
+    const de = await srv.request(`${url}?lang=de`, { cookies: false });
+    const alg = (d, id) => d.data.catalog.allergens.find((a) => a.id === id).label;
+    assert.equal(alg(es, 'milk'), 'Lácteos');
+    assert.equal(alg(en, 'milk'), 'Milk');
+    assert.equal(alg(de, 'milk'), 'Milch');
+    assert.equal(de.data.catalog.tags.find((x) => x.id === 'vegan').label, 'Vegan');
+
+    // Lo que el local sí tradujo sale traducido; lo que no, cae al idioma de casa.
+    assert.equal(en.data.categories[0].name, 'Small plates');
+    assert.equal(en.data.items[0].name, 'Pan con tomate');
+
+    // Y el panel lo dice con números, en vez de dejarlo en una sorpresa.
+    const cob = await srv.request('/api/menu/i18n');
+    const ingles = cob.data.coverage.find((c) => c.lang === 'en');
+    assert.equal(ingles.total, 3, 'dos textos del plato y el nombre de la categoría');
+    assert.equal(ingles.done, 1);
+    assert.equal(ingles.pct, 33);
+    assert.equal(cob.data.coverage.find((c) => c.lang === 'de').done, 0);
+
+    // Sin clave de traductor configurada, se dice; no se falla en silencio.
+    if (!process.env.MAITRE_DEEPL_KEY) {
+      const r = await srv.request('/api/menu/translate', { method: 'POST' });
+      assert.equal(r.status, 503);
+      assert.match(r.data.message, /no está activada/);
+    }
+  });
+});

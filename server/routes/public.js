@@ -8,7 +8,7 @@ import { createOrder, hydrateOrder, tableBill, settlePayment } from '../orders-c
 import { canChargeOnline, resolveMode, createCheckout, isSandbox } from '../payments.js';
 import { notifyStaff } from '../notify.js';
 import { qrPng } from '../qr.js';
-import { bad, ok, i18n, parseJson, nowSql, uuid, ALLERGENS, TAGS } from '../utils.js';
+import { bad, ok, i18n, parseJson, nowSql, uuid, allergensIn, tagsIn, IDIOMAS_CARTA } from '../utils.js';
 
 export const router = Router();
 
@@ -106,7 +106,11 @@ router.get('/:slug/qr.png', resolve, async (req, res) => {
 /** GET /api/public/:slug/:token — todo lo que necesita la carta móvil en una sola llamada. */
 router.get('/:slug/:token', resolve, (req, res) => {
   const venue = req.pubVenue;
-  const lang = ['es', 'ca', 'en', 'fr', 'de'].includes(req.query.lang) ? req.query.lang : venue.locale;
+  // Solo los idiomas que el local ha activado: pedir uno que no habla daría una carta
+  // a medias, con la interfaz en alemán y los platos en castellano.
+  const hablados = parseJson(venue.languages, [venue.locale || 'es']);
+  const pedido = String(req.query.lang || '');
+  const lang = IDIOMAS_CARTA.includes(pedido) && hablados.includes(pedido) ? pedido : (venue.locale || 'es');
   const plan = effectivePlan(venue);
   const toggles = parseJson(venue.features, {});
   const showAll = req.query.all === '1';
@@ -148,7 +152,7 @@ router.get('/:slug/:token', resolve, (req, res) => {
     preview: !req.pubTable,
     categories,
     items,
-    catalog: { allergens: ALLERGENS, tags: TAGS },
+    catalog: { allergens: allergensIn(lang), tags: tagsIn(lang) },
     can_order: !!req.pubTable && hasFeature(venue, 'orders') && toggles.orders !== false && !fueraDeHorario(venue),
     gate: {
       mode: venue.order_gate || 'open',

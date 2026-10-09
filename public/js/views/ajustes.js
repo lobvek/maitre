@@ -2,7 +2,7 @@
 import { api, esc, el, $, $$, toast, modal } from '/js/core.js';
 import { app, refreshChrome } from '/js/app.js';
 
-const LANGS = { es: 'Castellano', ca: 'Català', en: 'English', fr: 'Français', de: 'Deutsch' };
+const LANGS = { es: 'Castellano', ca: 'Català', en: 'English', fr: 'Français', de: 'Deutsch', it: 'Italiano' };
 
 export async function render(root) {
   const [v, push] = await Promise.all([api('/api/venue'), api('/api/push/key').catch(() => ({ subscriptions: 0, telegram: false }))]);

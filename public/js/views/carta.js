@@ -5,7 +5,7 @@ import { app, can, hasFeature } from '/js/app.js';
 let cats = [], items = [], catalog = null, sel = null;
 const langOf = () => app.venue.locale || 'es';
 const nameIn = (obj) => obj?.[langOf()] || obj?.es || Object.values(obj || {})[0] || '';
-const LANG_NAMES = { es: 'Castellano', ca: 'Català', en: 'English', fr: 'Français', de: 'Deutsch' };
+const LANG_NAMES = { es: 'Castellano', ca: 'Català', en: 'English', fr: 'Français', de: 'Deutsch', it: 'Italiano' };
 const langs = () => {
   const list = app.venue.languages?.length ? [...app.venue.languages] : [langOf()];
   return list.includes(langOf()) ? [langOf(), ...list.filter((l) => l !== langOf())] : list;
@@ -44,12 +44,14 @@ export async function render(root) {
         <button class="btn sm primary" id="new-item">+ Producto</button>` : ''}
       </div>
     </div>
+    <div id="idiomas"></div>
     <div style="display:grid;grid-template-columns:230px 1fr;gap:20px" id="grid">
       <div id="cats" style="min-width:0"></div>
       <div id="items" style="min-width:0"></div>
     </div>`;
   if (innerWidth < 760) $('#grid').style.gridTemplateColumns = '1fr';
   paint();
+  pintarIdiomas(root);
   if (can('manager')) {
     $('#new-cat').onclick = () => editCategory(null);
     $('#new-item').onclick = () => editItem(null);
@@ -295,4 +297,51 @@ Postres,Flan,De la casa,4.50,milk|eggs"></textarea></div>` });
     },
   });
   if (r) { toast(r.message, 'ok'); render($('#view')); }
+}
+
+
+/**
+ * Estado de la traducción de la carta.
+ * El idioma solo sirve si están traducidos los platos: cambiar cuatro botones y dejar
+ * «Pan con tomate» en todos los idiomas no es tener la carta en inglés.
+ */
+async function pintarIdiomas(root) {
+  const hueco = $('#idiomas', root);
+  if (!hueco) return;
+  let d;
+  try { d = await api('/api/menu/i18n'); } catch { return; }
+  if (!d.coverage.length) {
+    hueco.innerHTML = `<div class="notice" style="margin-bottom:18px">La carta está solo en
+      ${esc(LANG_NAMES[app.venue.locale] || app.venue.locale)}. Añade idiomas en
+      <a href="#/ajustes">Ajustes</a> y aquí podrás traducirla.</div>`;
+    return;
+  }
+  const falta = d.coverage.filter((c) => c.pct < 100);
+  hueco.innerHTML = `<div class="notice ${falta.length ? 'warn' : 'ok'}" style="margin-bottom:18px">
+    <div class="spread" style="gap:12px;flex-wrap:wrap">
+      <div>
+        <strong>Idiomas de la carta</strong>
+        <div style="font-size:13.5px;margin-top:4px">
+          ${d.coverage.map((c) => `${esc(LANG_NAMES[c.lang] || c.lang)}: <strong>${c.pct}%</strong>
+            <span class="muted">(${c.done}/${c.total})</span>${c.auto ? '' : ' <span class="muted">· a mano</span>'}`).join(' · ')}
+        </div>
+        ${falta.length ? `<div class="muted" style="font-size:12.5px;margin-top:4px">
+          Lo que falte se muestra en ${esc(LANG_NAMES[app.venue.locale] || app.venue.locale)}.</div>` : ''}
+      </div>
+      ${falta.some((c) => c.auto) ? '<button class="btn primary sm" id="traducir">Traducir lo que falte</button>' : ''}
+    </div></div>`;
+
+  const btn = $('#traducir', root);
+  if (!btn) return;
+  btn.onclick = async () => {
+    btn.disabled = true; btn.textContent = 'Traduciendo…';
+    try {
+      const r = await api('/api/menu/translate', { method: 'POST' });
+      toast(r.translated ? `${r.translated} textos traducidos. Repásalos: la máquina se equivoca con los nombres de plato.` : 'No faltaba nada por traducir.', 'ok');
+      render($('#view'));
+    } catch (err) {
+      toast(err.message, 'err');
+      btn.disabled = false; btn.textContent = 'Traducir lo que falte';
+    }
+  };
 }

@@ -60,6 +60,9 @@ export function orderCode(seq) {
  * Los 14 alérgenos de declaración obligatoria en la UE. Se muestran como
  * etiqueta de texto con su abreviatura: más legible y más serio que un emoji.
  */
+/** Idiomas en los que servimos la carta del comensal. */
+export const IDIOMAS_CARTA = ['es', 'ca', 'en', 'fr', 'de', 'it'];
+
 export const ALLERGENS = [
   { id: 'gluten', label: 'Gluten', short: 'GLU' },
   { id: 'crustaceans', label: 'Crustáceos', short: 'CRU' },
@@ -86,6 +89,64 @@ export const TAGS = [
   { id: 'house', label: 'De la casa', icon: 'star' },
   { id: 'new', label: 'Novedad', icon: 'sparkle' },
 ];
+
+/*
+ * Los catorce alérgenos y las etiquetas de dieta, en los idiomas que servimos.
+ * Es obligación legal informar de los alérgenos, así que esto no puede quedarse
+ * en castellano cuando el comensal está leyendo la carta en alemán.
+ * Las siglas cortas también cambian: GLU en español, GLU en inglés, pero LAC/MILK sí.
+ */
+const CATALOGO = {
+  ca: {
+    a: { gluten: ['Gluten', 'GLU'], crustaceans: ['Crustacis', 'CRU'], eggs: ['Ous', 'OUS'], fish: ['Peix', 'PEI'],
+      peanuts: ['Cacauets', 'CAC'], soy: ['Soja', 'SOJ'], milk: ['Lactis', 'LAC'], nuts: ['Fruits de closca', 'FRU'],
+      celery: ['Api', 'API'], mustard: ['Mostassa', 'MOS'], sesame: ['Sèsam', 'SES'], sulphites: ['Sulfits', 'SUL'],
+      lupin: ['Tramussos', 'TRA'], molluscs: ['Mol·luscs', 'MOL'] },
+    t: { vegetarian: 'Vegetarià', vegan: 'Vegà', gluten_free: 'Sense gluten', spicy: 'Picant', house: 'De la casa', new: 'Novetat' },
+  },
+  en: {
+    a: { gluten: ['Gluten', 'GLU'], crustaceans: ['Crustaceans', 'CRU'], eggs: ['Eggs', 'EGG'], fish: ['Fish', 'FSH'],
+      peanuts: ['Peanuts', 'PNT'], soy: ['Soy', 'SOY'], milk: ['Milk', 'MLK'], nuts: ['Tree nuts', 'NUT'],
+      celery: ['Celery', 'CEL'], mustard: ['Mustard', 'MUS'], sesame: ['Sesame', 'SES'], sulphites: ['Sulphites', 'SUL'],
+      lupin: ['Lupin', 'LUP'], molluscs: ['Molluscs', 'MOL'] },
+    t: { vegetarian: 'Vegetarian', vegan: 'Vegan', gluten_free: 'Gluten free', spicy: 'Spicy', house: 'House special', new: 'New' },
+  },
+  fr: {
+    a: { gluten: ['Gluten', 'GLU'], crustaceans: ['Crustacés', 'CRU'], eggs: ['Œufs', 'OEU'], fish: ['Poisson', 'POI'],
+      peanuts: ['Arachides', 'ARA'], soy: ['Soja', 'SOJ'], milk: ['Lait', 'LAI'], nuts: ['Fruits à coque', 'FRC'],
+      celery: ['Céleri', 'CEL'], mustard: ['Moutarde', 'MOU'], sesame: ['Sésame', 'SES'], sulphites: ['Sulfites', 'SUL'],
+      lupin: ['Lupin', 'LUP'], molluscs: ['Mollusques', 'MOL'] },
+    t: { vegetarian: 'Végétarien', vegan: 'Végan', gluten_free: 'Sans gluten', spicy: 'Épicé', house: 'Spécialité maison', new: 'Nouveauté' },
+  },
+  de: {
+    a: { gluten: ['Gluten', 'GLU'], crustaceans: ['Krebstiere', 'KRE'], eggs: ['Eier', 'EIE'], fish: ['Fisch', 'FIS'],
+      peanuts: ['Erdnüsse', 'ERD'], soy: ['Soja', 'SOJ'], milk: ['Milch', 'MIL'], nuts: ['Schalenfrüchte', 'SCH'],
+      celery: ['Sellerie', 'SEL'], mustard: ['Senf', 'SEN'], sesame: ['Sesam', 'SES'], sulphites: ['Sulfite', 'SUL'],
+      lupin: ['Lupinen', 'LUP'], molluscs: ['Weichtiere', 'WEI'] },
+    t: { vegetarian: 'Vegetarisch', vegan: 'Vegan', gluten_free: 'Glutenfrei', spicy: 'Scharf', house: 'Hausspezialität', new: 'Neu' },
+  },
+  it: {
+    a: { gluten: ['Glutine', 'GLU'], crustaceans: ['Crostacei', 'CRO'], eggs: ['Uova', 'UOV'], fish: ['Pesce', 'PES'],
+      peanuts: ['Arachidi', 'ARA'], soy: ['Soia', 'SOI'], milk: ['Latte', 'LAT'], nuts: ['Frutta a guscio', 'FRU'],
+      celery: ['Sedano', 'SED'], mustard: ['Senape', 'SEN'], sesame: ['Sesamo', 'SES'], sulphites: ['Solfiti', 'SOL'],
+      lupin: ['Lupini', 'LUP'], molluscs: ['Molluschi', 'MOL'] },
+    t: { vegetarian: 'Vegetariano', vegan: 'Vegano', gluten_free: 'Senza glutine', spicy: 'Piccante', house: 'Della casa', new: 'Novità' },
+  },
+};
+
+/** Los alérgenos en el idioma del comensal. Informar de esto es obligación legal. */
+export function allergensIn(lang = 'es') {
+  const dic = CATALOGO[lang]?.a;
+  if (!dic) return ALLERGENS;
+  return ALLERGENS.map((a) => ({ ...a, label: dic[a.id]?.[0] || a.label, short: dic[a.id]?.[1] || a.short }));
+}
+
+/** Las etiquetas de dieta en el idioma del comensal. */
+export function tagsIn(lang = 'es') {
+  const dic = CATALOGO[lang]?.t;
+  if (!dic) return TAGS;
+  return TAGS.map((x) => ({ ...x, label: dic[x.id] || x.label }));
+}
 
 export function ok(res, data) { return res.json(data ?? { ok: true }); }
 export function bad(res, message, code = 400, extra = {}) {

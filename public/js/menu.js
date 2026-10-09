@@ -1,37 +1,32 @@
 // Carta del comensal: consultar, filtrar, pedir desde la mesa y avisar al personal.
 import { api, money, esc, el, $, toast, stream, timeAgo, icon, loader, FSE_TEXT } from '/js/core.js';
 import { arrastrable, volarAlCarrito, haptic, ocupado, MACRO } from '/js/motion.js';
+import { texto, IDIOMAS } from '/js/textos.js';
 
 const [, , slug, tableToken = 'preview'] = location.pathname.split('/');
 const base = `/api/public/${encodeURIComponent(slug)}/${encodeURIComponent(tableToken)}`;
 
-const T = {
-  es: { menu: 'Carta', search: 'Buscar en la carta', cart: 'Mi pedido', send: 'Enviar pedido', call: 'Avisar', add: 'Añadir',
-    total: 'Total', empty: 'Aún no has añadido nada.', filters: 'Filtros', note: 'Comentario para la cocina',
-    yourOrders: 'Tus pedidos', bill: 'Cuenta de la mesa', close: 'Cerrar', allergensOff: 'Ocultar platos con', diet: 'Dieta',
-    sent: 'Pedido enviado a la barra', called: 'El personal ya lo sabe', name: 'Tu nombre (opcional)', out: 'Agotado',
-    payNow: 'Pagar y enviar', payVenue: 'Pagar en el local', confirmed: 'Pedido confirmado',
-    payHint: 'Se cobra ahora; el pedido llega a la barra en cuanto se confirma el pago.',
-    venueHint: 'Pagarás en el local al terminar.' },
-  ca: { menu: 'Carta', search: 'Cerca a la carta', cart: 'La meva comanda', send: 'Enviar comanda', call: 'Avisar', add: 'Afegir',
-    total: 'Total', empty: 'Encara no hi has afegit res.', filters: 'Filtres', note: 'Comentari per a la cuina',
-    yourOrders: 'Les teves comandes', bill: 'Compte de la taula', close: 'Tancar', allergensOff: 'Amaga plats amb', diet: 'Dieta',
-    sent: 'Comanda enviada a la barra', called: 'El personal ja ho sap', name: 'El teu nom (opcional)', out: 'Exhaurit',
-    payNow: 'Pagar i enviar', payVenue: 'Pagar al local', confirmed: 'Comanda confirmada',
-    payHint: 'Es cobra ara; la comanda arriba a la barra quan es confirma el pagament.',
-    venueHint: 'Pagaràs al local en acabar.' },
-  en: { menu: 'Menu', search: 'Search the menu', cart: 'My order', send: 'Send order', call: 'Call staff', add: 'Add',
-    total: 'Total', empty: 'Nothing added yet.', filters: 'Filters', note: 'Note for the kitchen',
-    yourOrders: 'Your orders', bill: 'Table bill', close: 'Close', allergensOff: 'Hide dishes with', diet: 'Diet',
-    sent: 'Order sent to the bar', called: 'Staff have been notified', name: 'Your name (optional)', out: 'Sold out',
-    payNow: 'Pay and send', payVenue: 'Pay at the venue', confirmed: 'Order confirmed',
-    payHint: 'You pay now; the order reaches the bar once the payment clears.',
-    venueHint: 'You will pay at the venue afterwards.' },
-};
+
+/**
+ * Idioma de salida. Por orden: el que pida la URL, el que ya eligió este móvil, o
+ * el del propio teléfono. Un alemán que escanea el QR debería ver la carta en alemán
+ * sin tocar nada; si no hablamos el suyo, cae al del local.
+ */
+function idiomaInicial() {
+  const pedido = new URLSearchParams(location.search).get('lang');
+  if (pedido && IDIOMAS[pedido]) return pedido;
+  const guardado = localStorage.getItem('maitre_lang');
+  if (guardado && IDIOMAS[guardado]) return guardado;
+  for (const l of navigator.languages || [navigator.language || '']) {
+    const corto = String(l).slice(0, 2).toLowerCase();
+    if (IDIOMAS[corto]) return corto;
+  }
+  return null;
+}
 
 const state = {
   data: null,
-  lang: localStorage.getItem('maitre_lang') || null,
+  lang: idiomaInicial(),
   cart: JSON.parse(localStorage.getItem(`maitre_cart_${slug}_${tableToken}`) || '[]'),
   sessionId: localStorage.getItem(`maitre_sess_${slug}_${tableToken}`) || '',
   search: '',
@@ -42,7 +37,7 @@ const state = {
   bill: null,
   tableCode: localStorage.getItem(`maitre_code_${slug}`) || '',
 };
-const t = (k) => (T[state.lang] || T.es)[k] || k;
+const t = (k, vars) => texto(state.lang, k, vars);
 const saveCart = () => localStorage.setItem(`maitre_cart_${slug}_${tableToken}`, JSON.stringify(state.cart));
 
 // --- Carga ------------------------------------------------------------------
@@ -55,7 +50,9 @@ async function load() {
       <h2>${esc(err.message)}</h2><p class="muted">Pide ayuda al personal del local.</p></div>`;
     return;
   }
-  state.lang = state.lang || state.data.lang;
+  // Si el local no habla ese idioma, se usa el suyo y no se insiste.
+  const hablados = state.data.venue.languages || [state.data.lang];
+  if (!state.lang || !hablados.includes(state.lang)) state.lang = state.data.lang;
   document.title = `${state.data.venue.name} · Carta`;
   document.documentElement.lang = state.lang;
   if (state.data.venue.brand_color) {
@@ -75,7 +72,7 @@ async function load() {
       try { showConfirmation(await api(`${base}/order/${Number(vuelta)}`)); } catch { /* pedido antiguo */ }
     }
     stream(`${base}/stream`, {
-      'order.updated': (o) => { mergeOrder(o); render(); if (o.status === 'served') toast('Tu pedido está servido', 'ok'); },
+      'order.updated': (o) => { mergeOrder(o); render(); if (o.status === 'served') toast(t('servedToast'), 'ok'); },
       'order.created': () => refreshOrders().then(render),
       'call.updated': () => refreshOrders().then(render),
       // El móvil del comensal también se duerme mientras espera el pedido.
@@ -126,7 +123,7 @@ function render() {
 
   const langSwitch = v.languages.length > 1
     ? `<select id="lang" class="m-lang">
-        ${v.languages.map((l) => `<option value="${l}" ${l === state.lang ? 'selected' : ''}>${l.toUpperCase()}</option>`).join('')}
+        ${v.languages.map((l) => `<option value="${l}" ${l === state.lang ? 'selected' : ''}>${IDIOMAS[l] || l.toUpperCase()}</option>`).join('')}
        </select>` : '';
 
   const body = cats.map((c) => {
@@ -145,7 +142,7 @@ function render() {
         ${logo}
         <div class="grow">
           <div class="m-name">${esc(v.name)}</div>
-          <div class="m-table">${d.table ? `Mesa ${esc(d.table.name)}` : 'Carta'}${v.city ? ` · ${esc(v.city)}` : ''}</div>
+          <div class="m-table">${d.table ? `${t('table')} ${esc(d.table.name)}` : t('menu')}${v.city ? ` · ${esc(v.city)}` : ''}</div>
         </div>
         ${langSwitch}
       </div>
@@ -158,26 +155,24 @@ function render() {
     </header>
 
     <main>
-      ${d.preview && self === top ? `<div class="notice info" style="margin:14px 0">Estás viendo la carta de escaparate. Escanea el QR de tu mesa para pedir.</div>` : ''}
+      ${d.preview && self === top ? `<div class="notice info" style="margin:14px 0">${t('preview')}</div>` : ''}
       ${d.gate?.closed_now
-        ? `<div class="notice warn" style="margin:14px 0">Ahora mismo no se puede pedir desde el móvil.
-           El servicio es de <strong>${esc(d.gate.hours)}</strong>. La carta la puedes mirar igual.</div>` : ''}
+        ? `<div class="notice warn" style="margin:14px 0">${t('closedNow', { h: esc(d.gate.hours) })}</div>` : ''}
       ${d.table && d.can_order && d.gate?.mode === 'occupied' && !d.gate.table_open
-        ? `<div class="notice warn" style="margin:14px 0">Puedes mirar la carta con calma. Para pedir desde el móvil,
-           el personal tiene que abrir la mesa: avísales y listo.</div>` : ''}
+        ? `<div class="notice warn" style="margin:14px 0">${t('tableWait')}</div>` : ''}
       ${activeOrdersHtml()}
-      ${body || `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-search"/></svg></span>No hay platos que coincidan.</div>`}
-      ${uncategorised.length ? `<h2 class="cat-title">Otros</h2>${uncategorised.map(dishHtml).join('')}` : ''}
+      ${body || `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-search"/></svg></span>${t('noMatch')}</div>`}
+      ${uncategorised.length ? `<h2 class="cat-title">${t('others')}</h2>${uncategorised.map(dishHtml).join('')}` : ''}
 
       ${v.service_note ? `<div class="notice" style="margin-top:26px">${esc(v.service_note)}</div>` : ''}
-      ${v.wifi_ssid ? `<div class="notice" style="margin-top:10px"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-wifi"/></svg> Wifi <strong>${esc(v.wifi_ssid)}</strong>${v.wifi_password ? ` · clave <strong>${esc(v.wifi_password)}</strong>` : ''}</div>` : ''}
+      ${v.wifi_ssid ? `<div class="notice" style="margin-top:10px"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-wifi"/></svg> ${t('wifi')} <strong>${esc(v.wifi_ssid)}</strong>${v.wifi_password ? ` · ${t('wifiKey')} <strong>${esc(v.wifi_password)}</strong>` : ''}</div>` : ''}
 
       <footer>
         <a class="m-maitre" href="/" target="_blank" rel="noopener">
-          Carta digital de <img src="/assets/logotipo.png" alt="Maitre"></a>
-        <div class="muted" style="font-size:11.5px;margin-top:6px">Sin registro ni cookies de seguimiento</div>
+          ${t('byMaitre')} <img src="/assets/logotipo.png" alt="Maitre"></a>
+        <div class="muted" style="font-size:11.5px;margin-top:6px">${t('noTracking')}</div>
         <div class="fse" style="text-align:left">${FSE_TEXT}</div>
-        <a href="/privacidad" class="muted" style="font-size:12px">Aviso de privacidad</a>
+        <a href="/privacidad" class="muted" style="font-size:12px">${t('privacy')}</a>
       </footer>
     </main>
 
@@ -222,28 +217,28 @@ function activeOrdersHtml() {
   const served = state.orders.find((o) => ['served', 'paid'].includes(o.status));
   const askReview = state.data.can_review && served && !localStorage.getItem(`maitre_reviewed_${slug}_${tableToken}`);
   const reviewCard = askReview ? `<div class="card" style="margin-top:14px;padding:14px">
-    <strong>¿Qué tal ha ido?</strong>
+    <strong>${t('reviewAsk')}</strong>
     <div class="row" style="margin-top:8px;gap:6px" id="stars">${[1, 2, 3, 4, 5].map((n) => `<button class="btn sm" data-star="${n}" style="font-size:18px;padding:6px 10px">☆</button>`).join('')}</div>
   </div>` : '';
   if (!open.length) return reviewCard;
   const steps = ['new', 'accepted', 'preparing', 'served'];
-  const label = { new: 'Recibido', accepted: 'Aceptado', preparing: 'En preparación', served: 'Servido' };
+  const label = { new: t('stNew'), accepted: t('stAccepted'), preparing: t('stPreparing'), served: t('stServed') };
   return open.map((o) => `<div class="card" style="margin-top:14px;padding:14px">
-    <div class="spread"><strong>Pedido ${esc(o.code)}</strong><span class="muted" style="font-size:12.5px">hace ${timeAgo(o.created_at)}</span></div>
+    <div class="spread"><strong>${t('orderWord')} ${esc(o.code)}</strong><span class="muted" style="font-size:12.5px">${t('agoWord')} ${timeAgo(o.created_at)}</span></div>
     <div class="track">${steps.map((s) => `<div class="${steps.indexOf(o.status) >= steps.indexOf(s) ? 'on' : ''}"></div>`).join('')}</div>
     <div class="spread"><span class="tag green">${label[o.status] || o.status}</span>
-      <span>${o.item_count} art. · <strong>${money(o.total_cents, state.data.venue.currency)}</strong></span></div>
+      <span>${o.item_count} ${t('itemsShort')} · <strong>${money(o.total_cents, state.data.venue.currency)}</strong></span></div>
   </div>`).join('') + reviewCard;
 }
 
 function openReview(rating) {
   const served = state.orders.find((o) => ['served', 'paid'].includes(o.status));
-  sheet(`<div class="sheet-head"><h3 style="margin:0">Gracias por valorar</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('reviewThanks')}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       <div style="font-size:26px;letter-spacing:4px;margin-bottom:12px">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</div>
       <div class="field"><label>¿Algo que contarle al local? (opcional)</label><textarea id="rc" rows="2" maxlength="300"></textarea></div>
       <label class="row" style="font-weight:400"><input type="checkbox" id="optin"> <span>Quiero enterarme de las novedades de ${esc(state.data.venue.name)}</span></label>
-      <div class="field hidden" id="mailf" style="margin-top:10px"><label>Tu email</label><input id="rm" type="email" placeholder="tu@email.com"></div>
+      <div class="field hidden" id="mailf" style="margin-top:10px"><label>${t('reviewEmail')}</label><input id="rm" type="email" placeholder="tu@email.com"></div>
       <p class="muted" style="font-size:12px;margin-top:12px">Solo el local recibe esta valoración. Tu email, únicamente si marcas la casilla.</p>
     </div>
     <div class="sheet-foot"><button class="btn primary grow" id="rs">Enviar</button></div>`, (bg, close) => {
@@ -256,7 +251,7 @@ function openReview(rating) {
           email: bg.querySelector('#rm').value, session_id: state.sessionId, order_id: served?.id,
         } });
         localStorage.setItem(`maitre_reviewed_${slug}_${tableToken}`, '1');
-        close(); render(); toast('¡Gracias!', 'ok');
+        close(); render(); toast(t('thanks'), 'ok');
       } catch (err) { toast(err.message, 'err'); }
     };
   });
@@ -333,11 +328,11 @@ function openDish(id) {
       ${allergenLine(i)}
       ${groups}
       ${state.data.allow_notes ? `<div class="field"><label>${t('note')}</label>
-        <input id="note" placeholder="Sin cebolla, poco hecho…" maxlength="140"></div>` : ''}
+        <input id="note" placeholder="${t('notePh')}" maxlength="140"></div>` : ''}
     </div>
     <div class="sheet-foot">
-      <div class="qty"><button data-q="-1" aria-label="Quitar uno">${icon('minus')}</button>
-        <span id="q" class="tabular">1</span><button data-q="1" aria-label="Añadir uno">${icon('plus')}</button></div>
+      <div class="qty"><button data-q="-1" aria-label="${t('minusOne')}">${icon('minus')}</button>
+        <span id="q" class="tabular">1</span><button data-q="1" aria-label="${t('plusOne')}">${icon('plus')}</button></div>
       <button class="btn primary grow" id="add">${t('add')} · <span id="sum">${money(i.price_cents, cur)}</span></button>
     </div>`, (bg, close) => {
     const sum = () => {
@@ -351,7 +346,7 @@ function openDish(id) {
     bg.querySelectorAll('input[type=checkbox]').forEach((c) => c.onchange = () => {
       const g = i.option_groups.find((x) => x.id === Number(c.dataset.group));
       const checked = [...bg.querySelectorAll(`input[data-group="${g.id}"]:checked`)];
-      if (checked.length > g.max_select) { c.checked = false; toast(`Máximo ${g.max_select} en «${g.name}»`); }
+      if (checked.length > g.max_select) { c.checked = false; toast(t('maxIn', { n: g.max_select, g: g.name })); }
       sum();
     });
     bg.querySelectorAll('input[type=radio]').forEach((c) => c.onchange = sum);
@@ -359,7 +354,7 @@ function openDish(id) {
     bg.querySelector('#add').onclick = () => {
       for (const g of i.option_groups) {
         const checked = bg.querySelectorAll(`input[data-group="${g.id}"]:checked`).length;
-        if (checked < g.min_select) return toast(`Elige ${g.min_select} en «${g.name}»`, 'err');
+        if (checked < g.min_select) return toast(t('chooseIn', { n: g.min_select, g: g.name }), 'err');
       }
       const picked = [...bg.querySelectorAll('input:checked')].map((x) => ({
         id: Number(x.value), name: x.parentElement.querySelector('span').textContent.trim(), delta: Number(x.dataset.delta),
@@ -386,14 +381,14 @@ function suggestAfter(item) {
     .filter((x) => x && x.available && !state.cart.some((l) => l.item_id === x.id));
   if (!sugs.length) return;
   const cur = state.data.venue.currency;
-  sheet(`<div class="sheet-head"><h3 style="margin:0">¿Añades algo con ${esc(item.name)}?</h3>
+  sheet(`<div class="sheet-head"><h3 style="margin:0">${t('addWith', { x: esc(item.name) })}</h3>
       <button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       ${sugs.map((x) => `<div class="line"><div class="grow"><strong>${esc(x.name)}</strong>
         ${x.description ? `<div class="muted" style="font-size:13px">${esc(x.description)}</div>` : ''}</div>
         <button class="btn sm primary" data-add="${x.id}">+ ${money(x.price_cents, cur)}</button></div>`).join('')}
     </div>
-    <div class="sheet-foot"><button class="btn grow" data-close2>No, gracias</button></div>`, (bg, close) => {
+    <div class="sheet-foot"><button class="btn grow" data-close2>${t('noThanks')}</button></div>`, (bg, close) => {
     bg.querySelector('[data-close]').onclick = close;
     bg.querySelector('[data-close2]').onclick = close;
     bg.querySelectorAll('[data-add]').forEach((b) => b.onclick = () => {
@@ -402,7 +397,7 @@ function suggestAfter(item) {
       state.cart.push({ item_id: x.id, name: x.name, qty: 1, unit: x.price_cents, option_ids: [], option_names: [], note: '' });
       saveCart(); haptic(14); render();
       volarAlCarrito(b, $('#btn-cart'));
-      b.disabled = true; b.textContent = 'Añadido';
+      b.disabled = true; b.textContent = t('added');
     });
   });
 }
@@ -410,7 +405,7 @@ function suggestAfter(item) {
 function allergenLine(i) {
   if (!i.allergens.length) return '';
   const names = i.allergens.map((a) => state.data.catalog.allergens.find((x) => x.id === a)?.label || a).join(' · ');
-  return `<div class="notice warn" style="margin-bottom:14px">${icon('alert')} Contiene: ${esc(names)}</div>`;
+  return `<div class="notice warn" style="margin-bottom:14px">${icon('alert')} ${t('contains')} ${esc(names)}</div>`;
 }
 
 function showInfo(i) {
@@ -440,13 +435,13 @@ function openCart() {
           </div>
         </div>
         <div class="right"><strong>${money(l.unit * l.qty, cur)}</strong>
-          <div><button class="btn ghost sm" data-del="${idx}" style="color:var(--red)">Quitar</button></div></div>
+          <div><button class="btn ghost sm" data-del="${idx}" style="color:var(--red)">${t('remove')}</button></div></div>
       </div>`).join('') : `<div class="empty"><span class="ico"><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-receipt"/></svg></span>${t('empty')}</div>`}
       ${state.data.ask_guest_name ? `<div class="field" style="margin-top:16px"><label>${t('name')}</label>
         <input id="guest" maxlength="40" value="${esc(localStorage.getItem('maitre_guest') || '')}"></div>` : ''}
-      ${state.cart.length ? `<div class="field"><label>${t('note')}</label><input id="onote" maxlength="200" placeholder="Todo junto, gracias"></div>` : ''}
+      ${state.cart.length ? `<div class="field"><label>${t('note')}</label><input id="onote" maxlength="200" placeholder="${t('orderNotePh')}"></div>` : ''}
       ${state.cart.length && state.data.payment.online && !state.data.payment.required ? `
-        <div class="field"><label>¿Cómo quieres pagarlo?</label>
+        <div class="field"><label>${t('payHow')}</label>
           <label class="opt"><input type="radio" name="pm" value="online" checked>
             <span class="grow">${t('payNow')}<div class="muted" style="font-size:12.5px">${t('payHint')}</div></span></label>
           <label class="opt"><input type="radio" name="pm" value="venue">
@@ -499,7 +494,7 @@ function openCart() {
             const code = prompt('Pide al personal el código de la mesa y escríbelo aquí:');
             if (code) { state.tableCode = code.trim().toUpperCase(); localStorage.setItem(`maitre_code_${slug}`, state.tableCode); }
           } else if (err.data?.error === 'table_closed') {
-            toast('Avisa al personal para que abra tu mesa y vuelve a enviarlo.', 'err');
+            toast(t('tableClosedErr'), 'err');
           } else {
             toast(err.message, 'err');
           }
@@ -518,13 +513,13 @@ function showConfirmation(order) {
   sheet(`
     <div class="sheet-head"><div>
       <h3 style="margin:0 0 2px">${t('confirmed')}</h3>
-      <div class="muted" style="font-size:13.5px">Pedido ${esc(order.code)} · mesa ${esc(state.data.table?.name || '')}</div>
+      <div class="muted" style="font-size:13.5px">${t('orderWord')} ${esc(order.code)} · ${t('table').toLowerCase()} ${esc(state.data.table?.name || '')}</div>
     </div><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
       <div class="center" style="padding:6px 0 18px">
         <div style="font-size:42px;line-height:1">${pagado ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg>' : '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-send"/></svg>'}</div>
         <p class="muted" style="margin:10px 0 0;font-size:14px">
-          ${pagado ? 'Pago confirmado. Ya lo están preparando.' : 'Enviado a la barra. Lo pagas en el local al terminar.'}
+          ${pagado ? t('paidOk') : t('sentBar')}
         </p>
       </div>
       ${order.items.map((li) => `<div class="line"><div class="grow">${li.qty} × ${esc(li.name)}
@@ -532,13 +527,13 @@ function showConfirmation(order) {
         <div>${money(li.line_total_cents, cur)}</div></div>`).join('')}
       <div class="spread" style="margin-top:14px;font-size:17px">
         <strong>${t('total')}</strong>
-        <strong>${money(order.total_cents, cur)}${pagado ? '' : ' · por pagar'}</strong></div>
-      ${pagado ? `<div class="notice ok" style="margin-top:16px">Cobrado con tarjeta.
-        Referencia <span class="mono">${esc(order.payment_ref || order.code)}</span>.</div>` : ''}
+        <strong>${money(order.total_cents, cur)}${pagado ? '' : ` · ${t('toPay')}`}</strong></div>
+      ${pagado ? `<div class="notice ok" style="margin-top:16px">${t('paidCard')}
+        ${t('ref')} <span class="mono">${esc(order.payment_ref || order.code)}</span>.</div>` : ''}
       <p class="muted" style="font-size:12.5px;margin-top:16px">
-        Puedes seguir el estado en esta misma pantalla. Si necesitas algo, usa el botón de aviso.</p>
+        ${t('followHere')}</p>
     </div>
-    <div class="sheet-foot"><button class="btn grow" data-close2>Seguir viendo la carta</button></div>`,
+    <div class="sheet-foot"><button class="btn grow" data-close2>${t('keepBrowsing')}</button></div>`,
     (bg, close) => {
       bg.querySelector('[data-close]').onclick = close;
       bg.querySelector('[data-close2]').onclick = close;
@@ -547,10 +542,10 @@ function showConfirmation(order) {
 
 function openCall() {
   const opts = [
-    { type: 'waiter', ico: 'hand', label: 'Que venga alguien' },
-    { type: 'bill', ico: 'receipt', label: 'La cuenta' },
-    { type: 'water', ico: 'drop', label: 'Agua' },
-    { type: 'help', ico: 'help', label: 'Una duda' },
+    { type: 'waiter', ico: 'hand', label: t('callWaiter') },
+    { type: 'bill', ico: 'receipt', label: t('callBill') },
+    { type: 'water', ico: 'drop', label: t('callWater') },
+    { type: 'help', ico: 'help', label: t('callHelp') },
   ];
   sheet(`<div class="sheet-head"><h3 style="margin:0">${t('call')}</h3><button class="btn ghost sm" data-close><svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-x"/></svg></button></div>
     <div class="sheet-body">
@@ -565,7 +560,7 @@ function openCall() {
       b.disabled = true;
       try {
         const r = await api(`${base}/call`, { method: 'POST', body: { type: b.dataset.type, session_id: state.sessionId } });
-        haptic(22); close(); toast(r.duplicate ? 'Ya lo habías pedido, están en ello' : t('called'), 'ok');
+        haptic(22); close(); toast(r.duplicate ? t('alreadyCalled') : t('called'), 'ok');
       } catch (err) { toast(err.message, 'err'); b.disabled = false; }
     });
   });

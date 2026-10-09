@@ -6,7 +6,7 @@ import { get, update, audit, all } from '../db.js';
 import { UPLOAD_DIR } from '../db.js';
 import { requireAuth, requireRole, requireVenue } from '../auth.js';
 import { publicVenue } from './auth.js';
-import { bad, ok, token, ALLERGENS, TAGS } from '../utils.js';
+import { bad, ok, token, ALLERGENS, TAGS, IDIOMAS_CARTA } from '../utils.js';
 
 export const router = Router();
 router.use(requireAuth, requireVenue);
@@ -29,7 +29,7 @@ router.patch('/', requireRole('manager'), (req, res) => {
   if (req.body.prices_include_tax !== undefined) patch.prices_include_tax = req.body.prices_include_tax ? 1 : 0;
   if (req.body.languages !== undefined) {
     const langs = (Array.isArray(req.body.languages) ? req.body.languages : ['es'])
-      .filter((l) => ['es', 'ca', 'en', 'fr', 'de'].includes(l));
+      .filter((l) => IDIOMAS_CARTA.includes(l));
     patch.languages = JSON.stringify(langs.length ? langs : ['es']);
   }
   if (req.body.features !== undefined) {

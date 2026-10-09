@@ -6,6 +6,7 @@ import { all, get, insert, update, run, audit, tx, UPLOAD_DIR } from '../db.js';
 import { requireAuth, requireRole, requireVenue } from '../auth.js';
 import { requireFeature } from '../plans.js';
 import { bad, ok, toI18n, i18n, parseJson, token, cents, euros } from '../utils.js';
+import { traducirCarta, cobertura, hayTraductor } from '../translate.js';
 
 export const router = Router();
 router.use(requireAuth, requireVenue);
@@ -329,3 +330,26 @@ router.get('/export.csv', requireRole('manager'), (req, res) => {
 });
 
 export { parseCsv };
+
+// --- Idiomas de la carta -----------------------------------------------------
+/** GET /api/menu/i18n — cuánto hay traducido en cada idioma del local. */
+router.get('/i18n', requireRole('manager'), (req, res) => {
+  res.json({ auto: hayTraductor(), coverage: cobertura(req.venue) });
+});
+
+/**
+ * POST /api/menu/translate — rellena lo que falte en los idiomas del local.
+ * Lo escrito a mano no se toca; con `all: true` se rehace todo.
+ */
+router.post('/translate', requireRole('manager'), async (req, res) => {
+  try {
+    const r = await traducirCarta(req.venue, { soloFaltantes: req.body?.all !== true });
+    audit(req.venue.id, req.user.id, 'menu.translated', 'venue', req.venue.id, r);
+    res.json({ ...r, coverage: cobertura(req.venue) });
+  } catch (err) {
+    if (err.code === 'no_translator') {
+      return bad(res, 'La traducción automática todavía no está activada en esta instalación. Escríbenos y la encendemos.', 503);
+    }
+    bad(res, `No se ha podido traducir: ${err.message}`, 502);
+  }
+});
