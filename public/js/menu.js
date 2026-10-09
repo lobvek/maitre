@@ -75,9 +75,11 @@ async function load() {
       try { showConfirmation(await api(`${base}/order/${Number(vuelta)}`)); } catch { /* pedido antiguo */ }
     }
     stream(`${base}/stream`, {
-      'order.updated': (o) => { mergeOrder(o); render(); if (o.status === 'served') toast('Tu pedido está servido <svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-menu"/></svg>', 'ok'); },
+      'order.updated': (o) => { mergeOrder(o); render(); if (o.status === 'served') toast('Tu pedido está servido', 'ok'); },
       'order.created': () => refreshOrders().then(render),
       'call.updated': () => refreshOrders().then(render),
+      // El móvil del comensal también se duerme mientras espera el pedido.
+      onResync: () => refreshOrders().then(render).catch(() => {}),
     });
   }
   render();

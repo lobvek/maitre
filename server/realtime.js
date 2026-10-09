@@ -15,7 +15,12 @@ export function subscribe(channel, res) {
   if (!channels.has(channel)) channels.set(channel, new Set());
   channels.get(channel).add(res);
 
-  const ping = setInterval(() => { try { res.write(': ping\n\n'); } catch { /* cerrado */ } }, 25000);
+  // Latido como evento con nombre, no como comentario: un comentario mantiene viva la
+  // conexión pero el navegador no lo ve, y el cliente necesita verlo para saber que sigue
+  // conectado de verdad. Sin esto, un móvil que vuelve de dormir se queda mudo sin enterarse.
+  const ping = setInterval(() => {
+    try { res.write(`event: ping\ndata: ${Date.now()}\n\n`); } catch { /* cerrado */ }
+  }, 20000);
   const close = () => {
     clearInterval(ping);
     channels.get(channel)?.delete(res);

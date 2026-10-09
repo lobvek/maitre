@@ -152,19 +152,49 @@ export function confirmDialog(title, text, save = 'Sí, continuar') {
  * la sesión ha caducado (una tablet que lleva toda la noche abierta) y, en ese
  * caso, manda a la pantalla de entrar en vez de reintentar para siempre.
  */
+/**
+ * Conexión en directo (SSE), pensada para un móvil que se duerme en el bolsillo.
+ *
+ * El caso que nos mordió: la app instalada en un iPhone se congela al pasar a segundo
+ * plano. Al volver, la conexión estaba muerta pero el navegador no siempre avisa con un
+ * error, así que la pantalla se quedaba tan tranquila sin recibir nada. Por eso:
+ *  - el servidor manda un latido cada 20 s y aquí se vigila que llegue;
+ *  - al volver a primer plano, o al recuperar la red, se comprueba y se reconecta;
+ *  - después de un corte se avisa con `onResync` para que la pantalla vuelva a pedir
+ *    los datos: lo que pasó mientras dormía no lo cuenta nadie.
+ */
 export function stream(url, handlers = {}) {
-  let source, closed = false, fallos = 0;
-  const connect = () => {
+  let source, closed = false, fallos = 0, ultimo = Date.now(), vigilante;
+  const VIVO = 50000;   // si en 50 s no llega ni un latido, la conexión está muerta
+
+  const reconectar = (porque) => {
+    if (closed) return;
+    try { source?.close(); } catch { /* ya estaba */ }
+    connect(porque);
+  };
+
+  const connect = (resync = false) => {
     source = new EventSource(url);
-    source.onopen = () => { fallos = 0; handlers.onopen?.(); };
+    ultimo = Date.now();
+    source.onopen = () => {
+      fallos = 0; ultimo = Date.now();
+      handlers.onopen?.();
+      // Volvemos de un corte: la pantalla tiene que repescar lo que se perdió.
+      if (resync) handlers.onResync?.();
+    };
+    source.addEventListener('ping', () => { ultimo = Date.now(); });
     for (const [event, fn] of Object.entries(handlers)) {
-      if (event === 'onopen' || event === 'onDead') continue;
-      source.addEventListener(event, (e) => { try { fn(JSON.parse(e.data)); } catch { fn(e.data); } });
+      if (['onopen', 'onDead', 'onResync', 'onLost'].includes(event)) continue;
+      source.addEventListener(event, (e) => {
+        ultimo = Date.now();
+        try { fn(JSON.parse(e.data)); } catch { fn(e.data); }
+      });
     }
     source.onerror = async () => {
       if (closed) return;
       source.close();
       fallos++;
+      handlers.onLost?.();   // que la pantalla lo diga: «en directo» no puede mentir
       if (fallos >= 3) {
         try {
           const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -172,11 +202,41 @@ export function stream(url, handlers = {}) {
         } catch { /* sin red: seguimos intentando */ }
       }
       // Se espera cada vez un poco más, hasta 30 s, para no machacar el servidor.
-      setTimeout(connect, Math.min(2000 * fallos, 30000));
+      // Al volver se pide `resync`: entre el corte y la reconexión han podido entrar
+      // pedidos que nadie nos va a contar, porque el evento ya pasó.
+      setTimeout(() => connect(true), Math.min(2000 * fallos, 30000));
     };
   };
   connect();
-  return { close: () => { closed = true; source?.close(); } };
+
+  // Vigilante: si deja de latir, se reconecta aunque el navegador no haya dado error.
+  // Corre también con la pantalla apagada o la app en segundo plano: la tablet de la
+  // barra tiene que sonar aunque nadie la esté mirando. El navegador frena estos
+  // temporizadores en segundo plano, así que tarda más, pero vuelve solo.
+  vigilante = setInterval(() => {
+    if (closed) return;
+    if (Date.now() - ultimo > VIVO) reconectar(true);
+  }, 15000);
+
+  // Al volver a primer plano no se espera al vigilante: se comprueba al momento.
+  const alVolver = () => {
+    if (closed || document.visibilityState !== 'visible') return;
+    if (source?.readyState === EventSource.CLOSED || Date.now() - ultimo > VIVO) reconectar(true);
+  };
+  document.addEventListener('visibilitychange', alVolver);
+  addEventListener('focus', alVolver);
+  addEventListener('online', () => reconectar(true));
+  addEventListener('pageshow', (e) => { if (e.persisted) reconectar(true); });
+
+  return {
+    close: () => {
+      closed = true;
+      clearInterval(vigilante);
+      document.removeEventListener('visibilitychange', alVolver);
+      removeEventListener('focus', alVolver);
+      source?.close();
+    },
+  };
 }
 
 /** Gráfico de líneas/barras en SVG, sin librerías. */

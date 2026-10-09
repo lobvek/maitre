@@ -81,7 +81,11 @@ async function refresh() {
 function connect() {
   stream('/api/orders/stream', {
     onopen: () => { $('#dot').classList.remove('off'); $('#livetxt').textContent = 'en directo'; },
+    onLost: () => { $('#dot').classList.add('off'); $('#livetxt').textContent = 'reconectando…'; },
     onDead: () => { $('#dot').classList.add('off'); $('#livetxt').textContent = 'sesión caducada'; location.href = '/entrar?next=/sala'; },
+    // Tras un corte (el móvil durmiendo, el wifi del bar), lo que pasó mientras tanto
+    // no lo cuenta nadie: se vuelven a pedir los pedidos y las mesas.
+    onResync: () => refresh().catch(() => {}),
     'order.created': (o) => { upsert(o); beep(2); toast(`Pedido nuevo · mesa ${o.table_name}`, 'ok'); paint(); },
     'order.updated': (o) => { upsert(o); paint(); },
     'call.created': (c) => { state.calls.unshift(c); beep(); toast(`Aviso de la mesa ${c.table_name || ''}`, 'ok'); paint(); },
@@ -91,6 +95,10 @@ function connect() {
     'review.created': (r) => toast(`Mesa ${r.table_name} os ha valorado con ${'★'.repeat(r.rating)}`, 'ok'),
   });
   setInterval(() => { if (document.visibilityState === 'visible') refresh().catch(() => {}); }, 60000);
+  // Y al volver a mirar la pantalla, sin esperar al siguiente minuto.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refresh().catch(() => {});
+  });
 }
 
 function upsert(order) {
