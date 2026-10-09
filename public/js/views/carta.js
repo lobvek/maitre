@@ -45,8 +45,8 @@ export async function render(root) {
       </div>
     </div>
     <div style="display:grid;grid-template-columns:230px 1fr;gap:20px" id="grid">
-      <div id="cats"></div>
-      <div id="items"></div>
+      <div id="cats" style="min-width:0"></div>
+      <div id="items" style="min-width:0"></div>
     </div>`;
   if (innerWidth < 760) $('#grid').style.gridTemplateColumns = '1fr';
   paint();

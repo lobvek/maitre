@@ -166,6 +166,9 @@ legend { font-weight: 600; font-size: 13px; padding: 0 7px; color: var(--ink-2);
 .card.flat { box-shadow: none; background: var(--paper); }
 .card-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 16px; }
 .grid { display: grid; gap: 16px; }
+/* Sin esto, una tabla ancha dentro de una celda empuja la rejilla más allá de la
+   pantalla y aparece el scroll lateral que no debería existir. */
+.grid > * { min-width: 0; }
 .grid.g2 { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
 .grid.g3 { grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); }
 .grid.g4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
@@ -286,11 +289,20 @@ tbody tr:last-child td { border-bottom: 0; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+/* Dedos, no ratones: en una pantalla táctil nada que se pueda tocar baja de 44 px
+   de alto. Es la medida de un pulgar, y en barra se pulsa deprisa y con prisa. */
+@media (pointer: coarse) {
+  .btn, button, select, input:not([type=checkbox]):not([type=radio]), .tabs button { min-height: 44px; }
+  .btn.sm, button.sm { padding-top: 10px; padding-bottom: 10px; }
+  .btn.icon { min-width: 44px; }
+  label.row { min-height: 40px; }
+}
+
 @media (max-width: 760px) {
   body { font-size: 15px; }
   .field-row { grid-template-columns: 1fr; }
   .card { padding: 17px; overflow-x: auto; }
   th, td { padding: 9px 8px; }
-  .card-head, .spread { flex-wrap: wrap; }
+  .card-head, .spread, .row { flex-wrap: wrap; }
   .movil-no { display: none !important; }
 }

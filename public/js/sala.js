@@ -101,6 +101,8 @@ function upsert(order) {
 }
 
 const mins = (iso) => Math.floor((Date.now() - new Date(iso.replace(' ', 'T') + 'Z').getTime()) / 60000);
+/** La antigüedad en corto: «7 min», «3 h», «2 d». En barra nadie lee «14445 min». */
+const edad = (m) => (m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`);
 
 /** Líneas del pedido que le tocan a esta estación (barra o cocina). */
 function linesFor(order) {
@@ -122,7 +124,7 @@ function pintarTodo() {
     const label = { waiter: icon('hand') + ' Camarero', bill: icon('receipt') + ' La cuenta',
       water: icon('drop') + ' Agua', help: icon('help') + ' Duda' }[c.type] || c.type;
     return `<div class="call"><strong>Mesa ${esc(c.table_name || '—')}</strong> ${label}
-      <span class="muted">${mins(c.created_at)} min</span>
+      <span class="muted">${edad(mins(c.created_at))}</span>
       <button class="btn sm green" data-call="${c.id}">Hecho</button></div>`;
   }).join('');
   $$('[data-call]').forEach((b) => b.onclick = async () => {
@@ -164,7 +166,7 @@ function ticket(o, col) {
   return `<div class="ticket ${age < 1 && o.status === 'new' ? 'new' : ''} ${age > 20 ? 'late' : ''} ${mio ? 'mine' : ''}" data-flip-id="o${o.id}">
     <header><span class="mesa">Mesa ${esc(o.table_name)}
       ${o.payment_status === 'paid' ? `<span class="tag green">${icon('check')}Pagado</span>` : ''}</span>
-      <span class="clock ${cls}">${esc(o.code)} · ${age} min</span></header>
+      <span class="clock ${cls}">${esc(o.code)} · ${edad(age)}</span></header>
     ${o.claimed_by ? `<div class="claimed">${icon('user')}${mio ? 'Lo estás metiendo tú' : esc(o.claimed_name) + ' lo está metiendo'}</div>` : ''}
     <ul>${linesFor(o).map((li) => `<li><b>${li.qty}×</b><span>${esc(li.name)}
       ${!state.station && li.station ? `<span class="st">${li.station === 'barra' ? 'barra' : 'cocina'}</span>` : ''}
@@ -419,7 +421,7 @@ async function setupPush() {
   catch (err) { console.warn('avisos no disponibles:', err.message); btn.classList.add('hidden'); return; }
   const paintBtn = async () => {
     const sub = await reg.pushManager.getSubscription();
-    btn.textContent = sub ? '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-vibrate"/></svg> Avisos activos' : '<svg class="i " aria-hidden="true"><use href="/assets/icons.svg#i-vibrate"/></svg> Avisos';
+    btn.innerHTML = icon('vibrate') + (sub ? ' Avisos activos' : ' Avisos');
     btn.classList.toggle('green', !!sub);
     return sub;
   };

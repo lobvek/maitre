@@ -69,7 +69,7 @@ export async function render(root) {
         </select>
         <div class="help">Con cobro previo, el pedido no aparece en la pantalla de sala hasta que el pago se confirma.
         Quien no quiera pagar por el móvil siempre puede avisar al camarero.
-        ${v.plan_features.includes('payments') ? '' : '<br><span class="tag brand">Local</span> El pago con el móvil está en el plan Local.'}</div></div>
+        ${v.plan_features.includes('payments') ? '' : '<br><span class="tag">En preparación</span> El pago con el móvil todavía no está disponible: lo abriremos local a local cuando funcione con dinero de verdad.'}</div></div>
         <hr>
         <h3 style="margin-top:0">Cómo se entera el personal</h3>
         <p class="muted" style="font-size:13.5px">Los avisos y pedidos entran en la pantalla de sala. Si no tenéis una tablet en barra,
@@ -118,7 +118,7 @@ export async function render(root) {
           <input id="webhook_url" value="${esc(v.webhook_url || '')}" placeholder="https://tu-tpv.example.com/maitre" ${v.plan_features.includes('integrations') ? '' : 'disabled'}>
           <div class="help">Maitre enviará ahí cada pedido (creado, pagado, servido) firmado con HMAC-SHA256.
           Es la vía de integración mientras preparamos los conectores nativos.
-          ${v.plan_features.includes('integrations') ? '' : '<br><span class="tag brand">Local</span> Las integraciones están en el plan Local.'}
+          ${v.plan_features.includes('integrations') ? '' : '<br><span class="tag">En preparación</span> La conexión con el TPV todavía no está disponible. Si te interesa, dínoslo y la abrimos contigo.'}
           ${v.webhook_secret ? `<br>Clave de firma: <span class="mono">${esc(v.webhook_secret)}</span>` : ''}</div></div>
         <hr>
         <h3>Seguridad</h3>

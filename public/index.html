@@ -75,6 +75,10 @@
 
   .price-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px; }
   .price-card.hi { border-color: var(--brand); box-shadow: 0 0 0 3px var(--g-100), var(--sh-2); }
+  /* Lo que todavía no existe se enseña en gris y sin precio: se ve que viene, no se vende. */
+  .price-card.soon { background: transparent; border-style: dashed; color: var(--ink-3); }
+  .price-card.soon h3, .price-card.soon .amount { color: var(--ink-3); }
+  .price-card.soon li .i { color: var(--ink-4, var(--ink-3)); opacity: .6; }
   .price-card .amount { font-family: var(--display); font-size: 2.7rem; letter-spacing: -.025em; }
   .price-card ul { list-style: none; padding: 0; margin: 18px 0 24px; font-size: 14.6px; }
   .price-card li { padding: 8px 0; border-top: 1px solid var(--line-2); display: flex; gap: 9px; align-items: flex-start; }
@@ -271,21 +275,22 @@
           <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Cambio y unión de mesas</span></li>
           <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Equipo con roles y permisos</span></li>
           <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Analítica: ventas, ticket, esperas, lo más vendido</span></li>
+          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Valoración del cliente al acabar, y permiso para escribirle</span></li>
           <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Hasta 80 mesas</span></li>
         </ul>
         <a class="btn primary block" href="#contacto">Pedir el piloto</a>
       </div>
-      <div class="price-card">
-        <h3>Local</h3>
-        <div class="amount">69 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
+      <div class="price-card soon">
+        <div class="spread"><h3 style="margin:0">En preparación</h3><span class="tag">Todavía no se vende</span></div>
+        <div class="amount" style="font-size:1.6rem">Sin precio aún</div>
         <ul>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Todo lo del plan Servicio</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Integración con tu TPV (webhook firmado)</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Pago con el móvil, opcional</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Reseñas y opt-in tras el servicio</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Varios locales en una cuenta</span></li>
+          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg><span>Conexión con tu TPV</span></li>
+          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg><span>Pago con el móvil, al pedir o al final</span></li>
+          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg><span>Varios locales en una cuenta</span></li>
         </ul>
-        <a class="btn block" href="#contacto">Hablar con nosotros</a>
+        <p class="muted" style="font-size:13.5px;margin:0 0 18px">No cobramos por nada de esto hasta que funcione en un bar
+        de verdad. Si te hace falta, dínoslo: decide el orden quien lo pide.</p>
+        <a class="btn block" href="#contacto">Decirnos qué necesitas</a>
       </div>
     </div>
     <div class="notice ok" style="max-width:1000px;margin:18px auto 0">
@@ -299,7 +304,6 @@
         <div style="min-width:220px"><label>Plan</label><select id="c-plan">
           <option value="mesa">Mesa · carta, pedido y avisos</option>
           <option value="servicio" selected>Servicio · sala completa y analítica</option>
-          <option value="local">Local · TPV y pagos</option>
         </select></div>
         <div style="min-width:190px"><label>Cuñas de madera</label><select id="c-wedge">
           <option value="0">No, empiezo con la hoja de QR</option>
@@ -361,7 +365,7 @@
         <p class="muted" style="font-size:14px;margin:0">Carta, pedido, llamada, estado, sala y cocina, cuña de madera, piloto medido.</p></div>
       <div class="card"><span class="tag amber">Siguiente</span><h3 style="margin-top:10px">Conectar</h3>
         <p class="muted" style="font-size:14px;margin:0">Conectores nativos con los TPV más usados (empezaremos por el que más pidan
-        los locales), pago con el móvil, reseñas y opt-in, varios locales en una cuenta.</p></div>
+        los locales), pago con el móvil y varios locales en una cuenta.</p></div>
       <div class="card"><span class="tag">Después</span><h3 style="margin-top:10px">Ahorrar tiempo de verdad</h3>
         <p class="muted" style="font-size:14px;margin:0">Módulos para la cuña (lámpara, cargador), estados de mesa por NFC para el personal,
         automatizaciones pequeñas y verificables sobre los datos de sala.</p></div>
@@ -425,8 +429,8 @@ import { api, $, toast, money } from '/js/core.js';
 
 $('#qr').innerHTML = `<img src="/api/public/bar-lancora/qr.png?size=200" onerror="this.style.display='none'" style="width:100%" alt="">`;
 
-const PRICE = { mesa: 1900, servicio: 3900, local: 6900 };
-const LIMIT = { mesa: 40, servicio: 80, local: 200 };
+const PRICE = { mesa: 1900, servicio: 3900 };
+const LIMIT = { mesa: 40, servicio: 80 };
 const calc = () => {
   const tables = Math.max(1, Number($('#c-tables').value) || 1);
   const plan = $('#c-plan').value;
