@@ -3,424 +3,385 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maitre · Cada mesa, un punto de servicio</title>
-<meta name="description" content="Convierte cada mesa en un punto de servicio bonito, rápido y medible — sin cambiar tu TPV y sin comisión por pedido. Piloto de 30 días en tu local.">
+<meta name="description" content="Carta, pedido desde la mesa y aviso al personal, con una cuña de madera en cada mesa. Sin cambiar tu TPV y sin comisión por pedido. Piloto de 30 días.">
 <link rel="icon" href="/assets/favicon.ico" sizes="32x32">
 <link rel="icon" href="/assets/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="preload" href="/assets/fonts/figtree-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/figtree-latin-500.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="theme-color" content="#646B41">
 <link rel="stylesheet" href="/css/base.css">
 <style>
-  /* --- Navegación --- */
-  header.nav { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--cream) 86%, transparent);
-    backdrop-filter: saturate(180%) blur(14px); border-bottom: 1px solid transparent; transition: border-color var(--t); }
-  header.nav.stuck { border-bottom-color: var(--line); }
-  header.nav .wrap { display: flex; align-items: center; gap: 22px; padding-top: 15px; padding-bottom: 15px; }
-  header.nav .logo img { width: 104px; display: block; }
-  header.nav a.link { font-size: 14.2px; color: var(--ink-2); text-decoration: none; font-weight: 500; }
-  header.nav a.link:hover { color: var(--brand); }
+/* ===========================================================================
+   La web es una carta.
+   Quien entra aquí usa el producto antes de que nadie se lo enseñe: la
+   navegación son las categorías de la carta, los planes son platos con su
+   botón +, y pedir el piloto es enviar un pedido.
+   =========================================================================== */
 
-  /* --- Portada --- */
-  .hero { padding: 64px 0 24px; }
-  .hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 54px; align-items: center; }
-  .hero h1 { margin-bottom: 20px; }
-  .hero p.lead { font-size: 1.14rem; color: var(--ink-2); max-width: 47ch; line-height: 1.6; }
-  .eyebrow { display: inline-flex; gap: 9px; align-items: center; font-size: 12.5px; font-weight: 700;
-    letter-spacing: .06em; text-transform: uppercase; color: var(--g-700); margin-bottom: 18px;
-    background: var(--g-100); padding: 6px 14px; border-radius: var(--r-pill); }
-  .eyebrow .i { width: 14px; height: 14px; }
+/* --- Entrada: la cafetera, y de ahí al contenido ------------------------- */
+#intro { position: fixed; inset: 0; z-index: 100; background: var(--cream);
+  display: grid; place-items: center; transition: opacity .5s var(--ease-macro), visibility .5s; }
+#intro.fuera { opacity: 0; visibility: hidden; }
+body.cargando { overflow: hidden; }
 
-  /* Móvil sobre la mesa, con la cuña al lado */
-  .mock { position: relative; display: grid; place-items: center; padding: 10px 0 24px; }
-  .mock::before { content: ''; position: absolute; inset: 6% -4% 2% -4%; border-radius: var(--r-lg);
-    background: linear-gradient(150deg, #C9A678 0%, #A97C4B 48%, #8A6238 100%);
-    box-shadow: var(--sh-3); }
-  .mock::after { content: ''; position: absolute; inset: 6% -4% 2% -4%; border-radius: var(--r-lg);
-    background-image: repeating-linear-gradient(94deg, rgba(90,53,29,.10) 0 2px, transparent 2px 13px);
-    mix-blend-mode: multiply; }
-  .phone { position: relative; width: 248px; border-radius: 34px; background: var(--g-950); padding: 9px;
-    box-shadow: 0 28px 60px -22px rgba(35,36,28,.62); transform: rotate(-2.5deg); z-index: 1; }
-  .phone .screen { background: #fff; border-radius: 26px; overflow: hidden; height: 476px; }
-  .phone .notch { position: absolute; top: 17px; left: 50%; transform: translateX(-50%);
-    width: 74px; height: 19px; background: var(--g-950); border-radius: 12px; z-index: 2; }
-  .wedge { position: absolute; right: -14px; bottom: 26px; width: 158px; padding: 15px 13px; border-radius: 10px;
-    background: linear-gradient(165deg, #E4C79B, #C49A62); color: #4A3418; text-align: center;
-    box-shadow: 0 18px 34px -14px rgba(35,36,28,.6); transform: rotate(6deg); z-index: 2;
-    border: 1px solid rgba(90,53,29,.22); }
-  .wedge .n { font-family: var(--display); font-size: 27px; font-weight: 700; line-height: 1; }
-  .wedge .qr { width: 62px; height: 62px; background: #fff; margin: 8px auto 5px; border-radius: 5px; padding: 4px; }
-  .wedge small { font-size: 9px; letter-spacing: .09em; text-transform: uppercase; opacity: .78; font-weight: 700; }
-  .hero-proof { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 22px; font-size: 13.4px; color: var(--ink-3); }
-  .hero-proof span { display: inline-flex; align-items: center; gap: 7px; }
-  .hero-proof .i { color: var(--g-500); }
+/* --- Cabecera: la misma que ve el comensal ------------------------------- */
+header.nav { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--cream) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(14px); border-bottom: 1px solid transparent;
+  transition: border-color var(--t) var(--ease-micro), padding var(--t) var(--ease-micro); }
+header.nav.stuck { border-bottom-color: var(--line); }
+header.nav .wrap { display: flex; align-items: center; gap: 14px; padding-top: 13px; padding-bottom: 13px; }
+header.nav .logo img { width: 104px; display: block; }
+.cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; justify-content: center; }
+.cats::-webkit-scrollbar { display: none; }
+.cat { flex: none; padding: 8px 15px; border-radius: var(--r-pill); background: transparent; border: 1px solid transparent;
+  font: 600 13.5px var(--sans); color: var(--ink-2); cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: background var(--t-fast) var(--ease-micro), color var(--t-fast) var(--ease-micro), border-color var(--t-fast) var(--ease-micro); }
+.cat:hover { background: var(--surface); border-color: var(--line); color: var(--ink); }
+.cat.on { background: var(--ink); border-color: var(--ink); color: #fff; }
 
-  section { padding: 66px 0; }
-  section.dark { background: var(--g-900); color: var(--brand-ink); }
-  section.dark h2, section.dark h3 { color: var(--brand-ink); }
-  section.dark .muted { color: #B9BCA8; }
-  section.dark .feat { background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.1); }
-  section.dark .feat p { color: #C8CBB7; }
-  section.dark .feat .i { color: var(--g-300); }
-  section.tint { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .section-title { text-align: center; max-width: 660px; margin: 0 auto 44px; }
-  .section-title p { font-size: 1.02rem; }
+/* --- Etiqueta diminuta de sección, en versalitas ------------------------- */
+.rotulo { font: 700 10.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-3); display: flex; align-items: center; gap: 9px; margin-bottom: 22px; }
+.rotulo::after { content: ''; height: 1px; flex: 1; background: var(--line); }
+.dark .rotulo { color: color-mix(in srgb, var(--cream) 55%, transparent); }
+.dark .rotulo::after { background: color-mix(in srgb, var(--cream) 20%, transparent); }
 
-  .feat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
-  .feat .i { width: 24px; height: 24px; color: var(--brand); margin-bottom: 13px; }
-  .feat h3 { font-size: 1.05rem; margin-bottom: 7px; }
-  .feat p { font-size: 14.2px; color: var(--ink-2); margin: 0; line-height: 1.58; }
+/* --- Portada: foto a sangre con cosas de verdad encima ------------------- */
+.portada { position: relative; min-height: min(92svh, 760px); display: flex; align-items: flex-end;
+  color: var(--cream); overflow: hidden; isolation: isolate; }
+.portada .foto { position: absolute; inset: 0; z-index: -2; background: var(--coffee) var(--foto-hero, none) center/cover no-repeat;
+  transform: scale(1.06); animation: respira 18s ease-in-out infinite alternate; }
+@keyframes respira { to { transform: scale(1); } }
+/* Sin foto todavía: degradado de marca para que nada se vea roto */
+.portada .foto::after { content: ''; position: absolute; inset: 0;
+  background: radial-gradient(90% 70% at 20% 0%, rgba(171,141,101,.38), transparent 60%),
+              linear-gradient(190deg, #3B402B 0%, #2C3021 45%, #1a1c13 100%); z-index: -1; }
+.portada .velo { position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(25,27,18,.92) 8%, rgba(25,27,18,.55) 45%, rgba(25,27,18,.25) 100%); }
+/* Grano: lo que separa un fondo plano de una superficie */
+.grano::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.38'/%3E%3C/svg%3E"); }
+.portada .wrap { position: relative; z-index: 2; padding-top: 92px; padding-bottom: 46px; }
+.portada h1 { font-size: clamp(2.3rem, 6.2vw, 4.3rem); font-weight: 600; line-height: 1.02;
+  letter-spacing: -.035em; color: var(--cream); max-width: 15ch; margin: 0 0 20px; }
+.portada .lead { font-size: clamp(1rem, 1.6vw, 1.16rem); max-width: 46ch; line-height: 1.6;
+  color: color-mix(in srgb, var(--cream) 80%, transparent); margin: 0; }
+.portada-fila { display: grid; grid-template-columns: 1.05fr auto; gap: 40px; align-items: end; }
 
-  .quote { font-family: var(--display); font-size: 1.32rem; line-height: 1.45; border-left: 3px solid var(--g-400);
-    padding: 4px 0 4px 22px; color: var(--ink-2); }
+/* La cuña, encima de la foto, y se puede tocar */
+.cuna { background: color-mix(in srgb, var(--cream) 96%, transparent); color: var(--ink);
+  border-radius: var(--r-lg); padding: 18px 18px 15px; width: 212px; text-align: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,.4); text-decoration: none; display: block;
+  transform: rotate(-2.4deg); transition: transform var(--t) var(--ease-macro), box-shadow var(--t) var(--ease-macro); }
+.cuna:hover { transform: rotate(0deg) translateY(-6px); box-shadow: 0 30px 70px rgba(0,0,0,.46); }
+.cuna .n { font-family: var(--display); font-size: 30px; font-weight: 600; line-height: 1; margin-bottom: 8px; }
+.cuna img { width: 100%; display: block; border-radius: 8px; }
+.cuna small { display: block; margin-top: 9px; font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
 
-  .price-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px; }
-  .price-card.hi { border-color: var(--brand); box-shadow: 0 0 0 3px var(--g-100), var(--sh-2); }
-  /* Lo que todavía no existe se enseña en gris y sin precio: se ve que viene, no se vende. */
-  .price-card.soon { background: transparent; border-style: dashed; color: var(--ink-3); }
-  .price-card.soon h3, .price-card.soon .amount { color: var(--ink-3); }
-  .price-card.soon li .i { color: var(--ink-4, var(--ink-3)); opacity: .6; }
-  .price-card .amount { font-family: var(--display); font-size: 2.7rem; letter-spacing: -.025em; }
-  .price-card ul { list-style: none; padding: 0; margin: 18px 0 24px; font-size: 14.6px; }
-  .price-card li { padding: 8px 0; border-top: 1px solid var(--line-2); display: flex; gap: 9px; align-items: flex-start; }
-  .price-card li .i { color: var(--g-500); margin-top: 2px; }
+/* La barra de prueba, sobre la foto: escribe y ya estás dentro */
+.probar { display: flex; gap: 8px; margin-top: 30px; max-width: 460px; }
+.probar input { background: color-mix(in srgb, var(--cream) 94%, transparent); border-color: transparent; }
+.portada .prueba-nota { font-size: 12.5px; margin-top: 11px;
+  color: color-mix(in srgb, var(--cream) 62%, transparent); }
 
-  .compare { font-size: 13.2px; }
-  .compare th, .compare td { white-space: nowrap; }
-  .compare td:first-child, .compare th:first-child { font-weight: 700; position: sticky; left: 0; background: var(--surface); }
-  .compare .yes { color: var(--g-600); font-weight: 700; }
-  .compare .no { color: var(--ink-3); }
+/* --- Platos: así se ven los planes y los extras -------------------------- */
+.plato { display: flex; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--line-2); align-items: flex-start; }
+.plato:last-child { border-bottom: 0; }
+.plato-cuerpo { flex: 1; min-width: 0; }
+.plato h3 { font-family: var(--display); font-size: 1.32rem; font-weight: 600; margin: 0 0 5px; letter-spacing: -.015em; }
+.plato p { margin: 0; color: var(--ink-2); font-size: 14.6px; line-height: 1.56; max-width: 56ch; }
+.plato .precio { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; margin-top: 11px;
+  display: flex; align-items: baseline; gap: 7px; }
+.plato .precio small { font-weight: 500; font-size: 12.5px; color: var(--ink-3); }
+.plato .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.plato.destacado { background: var(--g-50); border-radius: var(--r-lg); padding: 22px; border-bottom: 0;
+  box-shadow: inset 0 0 0 1px var(--g-200); margin: 10px 0; }
+.mas { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); color: var(--brand); display: grid; place-items: center; cursor: pointer;
+  box-shadow: var(--sh-1); align-self: center;
+  transition: transform var(--t-fast) var(--ease-micro), background var(--t-fast) var(--ease-micro); }
+.mas:hover { background: var(--g-50); }
+.mas:active { transform: scale(.88); }
+.mas.puesto { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.mas .i { width: 21px; height: 21px; }
+.plato.pronto { opacity: .62; }
+.plato.pronto .plato-cuerpo { border-left: 2px dashed var(--line); padding-left: 14px; }
 
-  .icp { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .icp ul { padding-left: 20px; margin: 10px 0 0; font-size: 14.5px; line-height: 1.8; }
-  .pilot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .pilot .card h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .09em; color: var(--brand);
-    font-family: var(--sans); font-weight: 700; }
-  .pilot ul { padding-left: 19px; margin: 0; font-size: 14.2px; line-height: 1.8; }
+/* --- Barra de pedido, igual que en el móvil del comensal ----------------- */
+.barra-pedido { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--cream) 92%, transparent); backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: center; align-items: center;
+  transform: translateY(120%); transition: transform .42s var(--ease-macro); }
+.barra-pedido.fuera { transform: translateY(0); }
+.barra-pedido .resumen { font-size: 13.5px; color: var(--ink-2); }
 
-  .steps { counter-reset: s; display: grid; gap: 20px; }
-  .step { display: flex; gap: 18px; align-items: flex-start; }
-  .step .n { counter-increment: s; flex: none; width: 38px; height: 38px; border-radius: 50%;
-    background: var(--brand); color: var(--brand-ink); display: grid; place-items: center;
-    font-weight: 600; font-family: var(--display); font-size: 17px; }
-  .step .n::before { content: counter(s); }
+/* --- Secciones ----------------------------------------------------------- */
+section { padding: 84px 0; }
+section.dark { background: var(--g-950); color: var(--cream); position: relative; isolation: isolate; }
+section.dark h2, section.dark h3 { color: var(--cream); }
+section.dark .muted, section.dark p { color: color-mix(in srgb, var(--cream) 72%, transparent); }
+section.dark .card { background: color-mix(in srgb, var(--cream) 6%, transparent); border-color: color-mix(in srgb, var(--cream) 12%, transparent); }
+section.tint { background: var(--paper); }
+.section-title { max-width: 720px; margin-bottom: 42px; }
+.section-title h2 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); letter-spacing: -.03em; margin: 0 0 12px; }
+.feat h3 { font-size: 1.1rem; margin: 0 0 7px; }
+.feat p { margin: 0; font-size: 14.4px; line-height: 1.58; color: var(--ink-2); }
+.quote { font-family: var(--display); font-size: 1.26rem; line-height: 1.48; letter-spacing: -.012em; }
 
-  .road { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-  .road .card { padding: 19px; }
-  .road h3 { font-size: 1rem; margin: 11px 0 6px; }
-  .road p { font-size: 13.6px; margin: 0; color: var(--ink-2); line-height: 1.55; }
+/* --- Foto incrustada en el contenido, no pegada al lado ------------------ */
+.banda { position: relative; min-height: 380px; display: grid; place-items: center; color: var(--cream);
+  overflow: hidden; isolation: isolate; text-align: center; }
+.banda .foto { position: absolute; inset: 0; z-index: -2; background: var(--coffee) var(--img, none) center/cover no-repeat; }
+.banda .foto::after { content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, #4E5434, #2C3021 70%, #AB8D65); opacity: .96; z-index: -1; }
+.banda .velo { position: absolute; inset: 0; z-index: -1; background: rgba(25,27,18,.52); }
+.banda .wrap { position: relative; z-index: 2; }
+.banda h2 { color: var(--cream); font-size: clamp(1.6rem, 4vw, 2.6rem); letter-spacing: -.03em; max-width: 20ch; margin: 0 auto 14px; }
+.banda p { color: color-mix(in srgb, var(--cream) 78%, transparent); max-width: 52ch; margin: 0 auto; }
 
-  footer.site { padding: 46px 0 36px; background: var(--g-950); color: #C8CBB7; }
-  footer.site a.link { color: #C8CBB7; text-decoration: none; font-size: 14px; }
-  footer.site a.link:hover { color: var(--brand-ink); }
-  footer.site .logo img { width: 128px; }
-  footer.site .fse { border-top-color: rgba(255,255,255,.12); color: #9DA18C; }
-  footer.site .fse strong { color: #C8CBB7; }
-  footer.site .tag { background: rgba(255,255,255,.07); color: #C8CBB7; border-color: transparent; }
+/* --- Pasos, tabla, pie --------------------------------------------------- */
+.pasos { display: grid; gap: 2px; counter-reset: paso; }
+.paso { display: flex; gap: 18px; padding: 20px 0; border-top: 1px solid var(--line-2); align-items: flex-start; }
+.paso::before { counter-increment: paso; content: counter(paso, decimal-leading-zero);
+  font: 700 11px var(--mono); color: var(--brand); letter-spacing: .1em; padding-top: 4px; flex: none; }
+.tabla-wrap { overflow-x: auto; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); }
+.tabla-wrap table { margin: 0; min-width: 860px; }
+footer.site { background: var(--g-950); color: color-mix(in srgb, var(--cream) 74%, transparent); padding: 56px 0 40px; }
+footer.site a { color: var(--cream); }
+footer.site .fse { margin-top: 30px; font-size: 11.5px; line-height: 1.6;
+  color: color-mix(in srgb, var(--cream) 52%, transparent); border-top: 1px solid color-mix(in srgb, var(--cream) 14%, transparent); padding-top: 20px; }
 
-  @media (max-width: 900px) {
-    .hero-grid { grid-template-columns: 1fr; gap: 34px; }
-    .mock { order: -1; }
-    .icp, .pilot, .road { grid-template-columns: 1fr; }
-    header.nav .wrap { gap: 13px; }
-    header.nav a.link { display: none; }
-  }
+/* --- Aparecer al llegar, no al cargar ------------------------------------ */
+.sube { opacity: 0; transform: translateY(22px); transition: opacity .62s var(--ease-out), transform .62s var(--ease-out); }
+.sube.vista { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sube { opacity: 1; transform: none; transition: none; }
+  .portada .foto { animation: none; transform: none; }
+}
+
+/* Dedos: las categorías también se tocan */
+@media (pointer: coarse) { .cat { min-height: 44px; display: inline-flex; align-items: center; } }
+
+@media (max-width: 900px) {
+  .portada-fila { grid-template-columns: 1fr; gap: 26px; }
+  .cuna { transform: none; width: 100%; max-width: 240px; }
+  header.nav .wrap { gap: 10px; }
+  .cats { justify-content: flex-start; }
+  .nav-extra { display: none; }
+  section { padding: 60px 0; }
+}
 </style>
 </head>
-<body>
+<body class="cargando">
+
+<div id="intro"></div>
+
 <header class="nav">
   <div class="wrap">
     <a href="/" class="logo"><img src="/assets/logotipo.png" alt="Maitre"></a>
-    <span class="grow"></span>
-    <a class="link" href="#producto">Producto</a>
-    <a class="link" href="#piloto">Piloto</a>
-    <a class="link" href="#precios">Precios</a>
-    <a class="link" href="#futuro">Futuro</a>
-    <a class="link" href="#contacto">Contacto</a>
-    <a class="btn sm" href="/entrar">Entrar</a>
-    <a class="btn sm primary" href="#contacto">Pedir un piloto</a>
+    <nav class="cats" id="cats">
+      <a class="cat" href="#producto">Qué hace</a>
+      <a class="cat" href="#precios">Precios</a>
+      <a class="cat" href="#piloto">Piloto</a>
+      <a class="cat" href="#comparativa">Comparativa</a>
+      <a class="cat" href="#futuro">Futuro</a>
+    </nav>
+    <a class="btn sm nav-extra" href="/entrar">Entrar</a>
+    <a class="btn sm primary" href="#precios">Pedir un piloto</a>
   </div>
 </header>
 
-<div class="wrap hero">
-  <div class="hero-grid">
-    <div>
-      <div class="eyebrow"><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-table"/></svg> La mesa, conectada</div>
-      <h1>Convierte cada mesa en un punto de servicio bonito, rápido y medible.</h1>
-      <p class="lead">Sin cambiar tu TPV y sin comisión por pedido. Maitre mejora lo que pasa entre que el cliente
-      se sienta y el camarero entrega el pedido: carta, pedido, llamada, estado y una cuña de madera en cada mesa.</p>
-      <div class="row wrap-row" style="margin-top:26px">
-        <a class="btn primary lg" href="#contacto">Probar un mes en mi local</a>
-        <a class="btn lg" href="/m/bar-lancora" target="_blank">Ver una carta de verdad</a>
+<div class="portada grano">
+  <div class="foto"></div><div class="velo"></div>
+  <div class="wrap">
+    <div class="portada-fila">
+      <div>
+        <div class="rotulo" style="max-width:280px">La mesa, conectada</div>
+        <h1>Cada mesa, un punto de servicio.</h1>
+        <p class="lead">Carta, pedido desde la mesa y aviso al personal, con una cuña de madera que aguanta
+        el uso. Sin cambiar tu TPV y sin comisión por pedido.</p>
+        <form class="probar" id="probar">
+          <input id="p-venue" placeholder="El nombre de tu bar" autocomplete="organization" aria-label="El nombre de tu bar">
+          <button class="btn primary" type="submit">Ver cómo quedaría</button>
+        </form>
+        <div class="prueba-nota">Te enseñamos tu carta montada en 15 minutos. Sin registro.</div>
       </div>
-      <div class="hero-proof">
-        <span><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg> Funcionando en 72 horas</span>
-        <span><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg> Sin cambiar tu TPV</span>
-        <span><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-card"/></svg> Sin comisión por pedido</span>
-      </div>
-    </div>
-    <div class="mock">
-      <div class="phone"><div class="notch"></div><div class="screen">
-        <div class="bar"></div>
-        <iframe src="/m/bar-lancora" style="width:100%;height:448px;border:0" title="Carta de ejemplo" loading="lazy"></iframe>
-      </div></div>
-      <div class="wedge">
+      <a class="cuna" href="/m/bar-lancora" target="_blank" rel="noopener" title="Abrir una carta de verdad">
         <div class="n">7</div>
-        <div class="qr" id="qr"></div>
+        <img src="/api/public/bar-lancora/qr.png?size=240" alt="QR de ejemplo" loading="lazy"
+             onerror="this.style.display='none'">
         <small>Escanea la carta</small>
-      </div>
+      </a>
     </div>
   </div>
 </div>
 
-<section id="producto" class="dark">
+<section id="producto">
   <div class="wrap">
-    <div class="section-title">
+    <div class="rotulo sube">Qué hace</div>
+    <div class="section-title sube">
       <h2>No es otra carta QR. Es la capa que le faltaba a tu sala.</h2>
-      <p class="muted">Una carta QR barata ya la vende cualquiera. Lo que no se compra por 10 € al mes es un flujo
-      de servicio fiable en hora punta, con una pieza en la mesa que aguanta el uso y con datos de lo que pasa de verdad.</p>
+      <p class="muted">Una carta QR barata la vende cualquiera. Lo que no se compra por 10 € al mes es un flujo de
+      servicio que aguanta un viernes por la noche, una pieza en la mesa que no se rompe y datos de lo que pasa de verdad.</p>
     </div>
     <div class="grid g3">
-      <div class="feat"><h3>Carta que se lee bien</h3>
-        <p>Pensada para el móvil: buscador, alérgenos de los 14 grupos, filtros por dieta, idiomas y foto en los platos que quieras.
-        Sin descargar nada, sin registrarse.</p></div>
-      <div class="feat"><h3>Pedido con confirmación y estado</h3>
+      <div class="feat sube"><h3>Carta que se lee bien</h3>
+        <p>Buscador, los 14 alérgenos, filtros por dieta, seis idiomas y foto en los platos que quieras.
+        Sin descargar nada y sin registrarse.</p></div>
+      <div class="feat sube"><h3>Pedido con confirmación y estado</h3>
         <p>El cliente elige, añade extras y ve el pedido avanzar: recibido, aceptado, en preparación, servido.
-        Menos ansiedad, menos «¿y lo mío?».</p></div>
-      <div class="feat"><h3>Aviso al personal, con motivo</h3>
-        <p>Camarero, la cuenta o agua, con un toque. Lo activas o lo desactivas tú. Si en tu sala no encaja, el botón no aparece.</p></div>
-      <div class="feat"><h3>Cola de sala que no pierde pedidos</h3>
-        <p>Pantalla para barra y cocina por separado, aviso sonoro, alerta si algo lleva 3 minutos sin aceptar,
-        agotados en un toque y comanda imprimible.</p></div>
-      <div class="feat"><h3>Cuña de madera modular</h3>
-        <p>Tu logo, el número de mesa y el QR grabados a láser; «Reservado» en la base; módulos que se deslizan
-        (servilletero, cubrecenicero, azucarillos, aro de taza). El QR es administrable: si algo cambia, no se regraba madera.</p></div>
-      <div class="feat"><h3>Medible desde el primer servicio</h3>
-        <p>Qué mesas escanean, cuántas piden o llaman, cuánto tardáis en aceptar, ticket medio y lo que más se vende.
-        Los datos que necesitas para decidir si seguir.</p></div>
-    </div>
-
-    <div class="card" style="margin-top:40px;max-width:820px;margin-left:auto;margin-right:auto">
-      <div class="quote">«No te voy a cambiar el TPV. Voy a mejorar lo que ocurre entre que el cliente se sienta y el
-      camarero entrega el pedido. Te lo dejo funcionando un mes, medimos esperas, uso y ticket, y si no aporta valor
-      retiramos el material.»</div>
-      <p class="muted" style="font-size:13px;margin:12px 0 0">Así de simple es la propuesta. Y así de simple es salir.</p>
+        Menos «¿y lo mío?».</p></div>
+      <div class="feat sube"><h3>Aviso al personal, con motivo</h3>
+        <p>Camarero, la cuenta o agua, de un toque. Lo activas o lo quitas tú. Si en tu sala no encaja, el botón no aparece.</p></div>
+      <div class="feat sube"><h3>Cola de sala que no pierde pedidos</h3>
+        <p>Barra y cocina por separado, aviso sonoro, alarma si algo lleva 3 minutos sin aceptar, agotados de un
+        toque y comanda imprimible.</p></div>
+      <div class="feat sube"><h3>Cuña de madera modular</h3>
+        <p>Tu logo, el número y el QR grabados a láser. El QR es administrable: si cambia la mesa, el dominio o el
+        local, se reasigna desde el panel sin regrabar madera.</p></div>
+      <div class="feat sube"><h3>Medible desde el primer servicio</h3>
+        <p>Qué mesas escanean, cuántas piden, cuánto tardáis en aceptar, ticket medio y lo que más se vende.
+        Lo que hace falta para decidir si sigue.</p></div>
     </div>
   </div>
 </section>
 
-<section id="piloto" class="tint">
+<div class="banda grano" style="--img:var(--foto-sala, none)">
+  <div class="foto"></div><div class="velo"></div>
   <div class="wrap">
-    <div class="section-title"><h2>Un piloto de 30 días, no un regalo</h2>
-      <p class="muted">Lo probamos en tu local con un objetivo pactado y una decisión clara al final. Tú aportas
-      la línea de base; nosotros, la instalación, el material y la atención directa durante los servicios.</p></div>
-    <div class="pilot">
-      <div class="card"><h3>Antes</h3><ul>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>7 días de línea base: ticket medio y esperas</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Carta cargada, QR en cada mesa, responsables definidos</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Objetivo elegido: tiempo, ticket o carga de sala</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Depósito por las cuñas y fecha de decisión</span></li></ul></div>
-      <div class="card"><h3>Durante</h3><ul>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Observamos dos servicios contigo</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Revisión semanal de uso e incidencias</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Soporte directo de los fundadores</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Registro de cualquier pedido perdido</span></li></ul></div>
-      <div class="card"><h3>Éxito al día 30</h3><ul>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>≥ 20 % de las mesas usan pedido o llamada</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>+ 5 % de ticket, o ahorro de tiempo observable</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>0 pedidos perdidos</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>El equipo de sala quiere mantenerlo</span></li></ul></div>
-    </div>
-    <div class="icp" style="margin-top:34px">
-      <div class="card"><h3>Para quién es</h3><ul>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Bares, cafeterías y casual dining independientes, 1–3 locales</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>15–40 mesas, terraza, picos de servicio</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Carta que cambia y propietario presente</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Quejas por esperas, errores de comanda o falta de manos</span></li></ul></div>
-      <div class="card"><h3>Para quién no, todavía</h3><ul>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Alta cocina, hoteles, discotecas y cadenas con compras centralizadas</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Locales sin wifi estable ni alternativa</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Cocinas sin nadie que acepte pedidos</span></li>
-        <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Quien solo quiere un PDF con QR</span></li></ul></div>
-    </div>
+    <h2>«No te voy a cambiar el TPV.»</h2>
+    <p>Voy a mejorar lo que ocurre entre que el cliente se sienta y el camarero entrega el pedido. Te lo dejo
+    funcionando un mes, medimos esperas, uso y ticket, y si no aporta valor retiramos el material.</p>
   </div>
-</section>
+</div>
 
-<section id="precios">
-  <div class="wrap">
-    <div class="section-title"><h2>Precios claros</h2>
+<section id="precios" class="tint">
+  <div class="wrap" style="max-width:860px">
+    <div class="rotulo sube">La carta</div>
+    <div class="section-title sube">
+      <h2>Elige lo tuyo y pídelo.</h2>
       <p class="muted">Cuota fija por local. Sin instalación, sin permanencia y sin porcentaje sobre lo que vendes.
-      Si algún día incorporas el pago con el móvil, la tarifa de la pasarela se muestra aparte, nunca escondida en la cuota.</p></div>
-    <div class="grid g3" style="max-width:1000px;margin:0 auto">
-      <div class="price-card">
-        <h3>Mesa</h3>
-        <div class="amount">19 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
-        <ul>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Carta móvil, idiomas y alérgenos</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>QR administrable por mesa y hoja de QR</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Pedido desde la mesa, con variantes y extras</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Confirmación y estado del pedido</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Aviso al personal con motivo</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Pantalla de sala sencilla para recibir pedidos</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Hasta 40 mesas</span></li>
-        </ul>
-        <a class="btn block" href="#contacto">Empezar</a>
-      </div>
-      <div class="price-card hi">
-        <div class="spread"><h3 style="margin:0">Servicio</h3><span class="tag brand">Plan principal</span></div>
-        <div class="amount">39 €<span style="font-size:1rem;font-family:var(--sans)" class="muted">/local/mes + IVA</span></div>
-        <ul>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span><strong>Todo lo del plan Mesa</strong></span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Barra y cocina por separado, comanda imprimible</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Agotados en un toque y sugerencias al pedir</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Cambio y unión de mesas</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Equipo con roles y permisos</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Analítica: ventas, ticket, esperas, lo más vendido</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Valoración del cliente al acabar, y permiso para escribirle</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-check"/></svg><span>Hasta 80 mesas</span></li>
-        </ul>
-        <a class="btn primary block" href="#contacto">Pedir el piloto</a>
-      </div>
-      <div class="price-card soon">
-        <div class="spread"><h3 style="margin:0">En preparación</h3><span class="tag">Todavía no se vende</span></div>
-        <div class="amount" style="font-size:1.6rem">Sin precio aún</div>
-        <ul>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg><span>Conexión con tu TPV</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg><span>Pago con el móvil, al pedir o al final</span></li>
-          <li><svg class="i" aria-hidden="true"><use href="/assets/icons.svg#i-clock"/></svg><span>Varios locales en una cuenta</span></li>
-        </ul>
-        <p class="muted" style="font-size:13.5px;margin:0 0 18px">No cobramos por nada de esto hasta que funcione en un bar
-        de verdad. Si te hace falta, dínoslo: decide el orden quien lo pide.</p>
-        <a class="btn block" href="#contacto">Decirnos qué necesitas</a>
-      </div>
+      Añade lo que te encaje y te decimos el total: es exactamente lo que hará tu cliente en la mesa.</p>
     </div>
-    <div class="notice" style="max-width:1000px;margin:18px auto 0">
-      <strong>¿Varios locales de la misma marca?</strong> El plan Grupo son <strong>29 € por local y mes</strong> a partir de
-      cinco: todo lo de Servicio, más una cuenta para quien manda que entra en todos y los compara entre sí,
-      mientras cada local sigue viendo solo el suyo. Sale más barato porque la visita, la formación y el soporte
-      se hacen una vez para toda la marca. <a href="#contacto">Hablamos</a>.</div>
-    <div class="notice ok" style="max-width:1000px;margin:18px auto 0">
-      <strong>Oferta Fundadores.</strong> Los primeros locales que conviertan su piloto se quedan el plan Servicio a
-      <strong>19 €/mes durante 24 meses</strong>. Es nuestra forma de pagar el riesgo de ir primero.</div>
+    <div class="card sube" style="padding:10px 22px" id="carta-planes"></div>
+    <p class="muted sube" style="font-size:12.5px;margin-top:14px">Precios sin IVA. Las cuñas se cobran a su coste
+    completo, una sola vez; durante el piloto se dejan en depósito.</p>
+  </div>
+</section>
 
-    <div class="card" style="max-width:1000px;margin:26px auto 0">
-      <h3>Calcula lo que te costaría</h3>
-      <div class="row wrap-row" style="align-items:flex-end">
-        <div style="min-width:150px"><label>Mesas</label><input type="number" id="c-tables" min="1" max="200" value="18"></div>
-        <div style="min-width:220px"><label>Plan</label><select id="c-plan">
-          <option value="mesa">Mesa · carta, pedido y avisos</option>
-          <option value="servicio" selected>Servicio · sala completa y analítica</option>
-        </select></div>
-        <div style="min-width:190px"><label>Cuñas de madera</label><select id="c-wedge">
-          <option value="0">No, empiezo con la hoja de QR</option>
-          <option value="1" selected>Sí, una por mesa</option>
-        </select></div>
-      </div>
-      <div id="calc" class="notice ok" style="margin-top:18px"></div>
-      <p class="muted" style="font-size:12.5px;margin:10px 0 0">Las cuñas se cobran a su <strong>coste completo</strong>
-      (material, grabado, merma, montaje, embalaje, envío y garantía) más IVA, revisado cada trimestre; orientativamente
-      entre 9 y 14 € por pieza según lote. Son un pago único, no una cuota. Se fabrican con tu logo y tardan unos días:
-      mientras tanto empiezas con la hoja de QR. Durante el piloto se dejan con depósito.</p>
+<section id="piloto">
+  <div class="wrap">
+    <div class="rotulo sube">El piloto</div>
+    <div class="section-title sube"><h2>Un piloto de 30 días, no un regalo</h2>
+      <p class="muted">Se prueba en tu local con un objetivo pactado y una decisión clara al final. Tú pones la línea
+      de base; nosotros la instalación, el material y la atención durante los servicios.</p></div>
+    <div class="grid g3">
+      <div class="card sube"><h3>Antes</h3><ul class="stack" style="font-size:14px">
+        <li>7 días de línea base: ticket medio y esperas</li>
+        <li>Carta cargada, QR en cada mesa, responsables definidos</li>
+        <li>Objetivo elegido: tiempo, ticket o carga de sala</li>
+        <li>Depósito por las cuñas y fecha de decisión</li></ul></div>
+      <div class="card sube"><h3>Durante</h3><ul class="stack" style="font-size:14px">
+        <li>Observamos dos servicios contigo</li>
+        <li>Revisión semanal de uso e incidencias</li>
+        <li>Soporte directo de los fundadores</li>
+        <li>Registro de cualquier pedido perdido</li></ul></div>
+      <div class="card sube"><h3>Éxito al día 30</h3><ul class="stack" style="font-size:14px">
+        <li>≥ 20 % de las mesas usan pedido o llamada</li>
+        <li>+ 5 % de ticket, o ahorro de tiempo observable</li>
+        <li>0 pedidos perdidos</li>
+        <li>El equipo de sala quiere mantenerlo</li></ul></div>
     </div>
 
-    <div class="card" style="max-width:1000px;margin:20px auto 0;overflow-x:auto">
-      <h3>Dónde queda frente a lo que hay</h3>
-      <p class="muted" style="font-size:13.5px">Por precio, siempre habrá una carta QR más barata. La diferencia está en lo que
-      pasa en el local: quién te lo instala, qué hay en la mesa y si el flujo de sala aguanta un viernes por la noche.</p>
-      <table class="compare"><thead><tr>
-        <th></th><th>Cuota</th><th>Sin cambiar tu TPV</th><th>Sin % por pedido</th><th>Instalación en tu local</th>
-        <th>Pieza física en la mesa</th><th>Barra y cocina separadas</th><th>Piloto medido</th></tr></thead>
+    <div class="rotulo sube" style="margin-top:56px">De cero a servir</div>
+    <div class="pasos" style="max-width:760px">
+      <div class="paso sube"><div><strong>Lo montamos contigo</strong>
+        <div class="muted">Vamos al local. Carta cargada, mesas creadas, hoja de QR impresa. Formación al equipo en menos de 45 minutos.</div></div></div>
+      <div class="paso sube"><div><strong>Primer servicio acompañado</strong>
+        <div class="muted">Pantalla de sala en una tablet o en el ordenador de barra. Observamos, ajustamos avisos y agotados.</div></div></div>
+      <div class="paso sube"><div><strong>Ya funciona solo</strong>
+        <div class="muted">Revisión semanal. Las cuñas con tu logo llegan en unos días y sustituyen la hoja provisional.</div></div></div>
+      <div class="paso sube"><div><strong>Decidimos con datos</strong>
+        <div class="muted">Uso por mesa, esperas, ticket, incidencias. Contratas, ampliamos por una causa concreta o retiramos el material. Sin dramas.</div></div></div>
+    </div>
+
+    <div class="grid g2" style="margin-top:50px">
+      <div class="card sube"><h3>Para quién es</h3><ul class="stack" style="font-size:14px">
+        <li>Bares, cafeterías y casual dining independientes, de 1 a 3 locales</li>
+        <li>15–40 mesas, terraza y picos de servicio</li>
+        <li>Carta que cambia y propietario presente</li>
+        <li>Quejas por esperas, errores de comanda o falta de manos</li></ul></div>
+      <div class="card sube"><h3>Para quién no, todavía</h3><ul class="stack" style="font-size:14px">
+        <li>Alta cocina, hoteles, discotecas y cadenas con compras centralizadas</li>
+        <li>Locales sin wifi estable ni alternativa</li>
+        <li>Cocinas sin nadie que acepte pedidos</li>
+        <li>Quien solo quiere un PDF con un QR</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="comparativa" class="dark grano">
+  <div class="wrap">
+    <div class="rotulo sube">Comparativa</div>
+    <div class="section-title sube"><h2>Lo que cobran los demás, y por qué no es lo mismo</h2>
+      <p class="muted">Tarifas públicas consultadas el 11 de septiembre de 2026, sin IVA salvo indicación.
+      «—» significa que no lo ofrecen o no lo publican.</p></div>
+    <div class="tabla-wrap sube">
+      <table>
+        <thead><tr><th>Quién</th><th>Precio</th><th>Sin tocar tu TPV</th><th>Sin comisión</th>
+          <th>Instalación</th><th>Pieza en la mesa</th><th>Sala y cocina</th><th>Piloto medido</th></tr></thead>
         <tbody>
-          <tr><td>Maitre</td><td>19 – 69 €/mes</td><td>✓</td><td>✓</td><td>✓ en 72 h</td><td>✓ cuña de madera modular</td><td>✓</td><td>✓ 30 días con objetivos</td></tr>
+          <tr><td><strong>Maitre</strong></td><td>19 – 39 €/mes</td><td>✓</td><td>✓</td><td>✓ en 72 h</td><td>✓ cuña de madera modular</td><td>✓</td><td>✓ 30 días con objetivos</td></tr>
           <tr><td>MesaCarta</td><td>10 – 15 €/mes</td><td>✓</td><td>✓</td><td>— autoservicio</td><td>—</td><td>—</td><td>—</td></tr>
           <tr><td>Honei</td><td>a medida / por uso</td><td>✓</td><td>— ligado al pago</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
           <tr><td>Last.app</td><td>50 – 175 €/mes + 500 €</td><td>— es tu TPV</td><td>— 1,5 % en QR</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
           <tr><td>Qamarero</td><td>119 – 249 €/mes</td><td>— todo en uno</td><td>✓</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
           <tr><td>Cegid Revo</td><td>desde 838 €/año</td><td>— TPV iPad</td><td>✓</td><td>✓ distribuidor</td><td>—</td><td>✓</td><td>—</td></tr>
         </tbody></table>
-      <p class="muted" style="font-size:12px;margin:10px 0 0">Tarifas públicas consultadas el 11 de septiembre de 2026, sin IVA
-      salvo indicación; «—» significa que no lo ofrecen o no lo publican. No todos los productos son comparables ni incluyen
-      hardware, implantación o comisiones de pago.</p>
-    </div>
-  </div>
-</section>
-
-<section class="tint">
-  <div class="wrap" style="max-width:760px">
-    <h2 class="center">De cero a servir en 72 horas</h2>
-    <div class="steps" style="margin-top:30px">
-      <div class="step"><div class="n"></div><div><strong>Día 1 · Lo montamos contigo</strong>
-        <div class="muted">Vamos al local. Carta cargada (a mano o desde tu CSV), mesas creadas, hoja de QR impresa. Formación al equipo en menos de 45 minutos.</div></div></div>
-      <div class="step"><div class="n"></div><div><strong>Día 2 · Primer servicio acompañado</strong>
-        <div class="muted">Pantalla de sala en una tablet o el ordenador de barra. Observamos, ajustamos avisos y agotados.</div></div></div>
-      <div class="step"><div class="n"></div><div><strong>Día 3 · Ya funciona solo</strong>
-        <div class="muted">Revisión semanal durante el piloto. Las cuñas de madera con tu logo llegan en unos días y sustituyen la hoja provisional.</div></div></div>
-      <div class="step"><div class="n"></div><div><strong>Día 30 · Decidimos con datos</strong>
-        <div class="muted">Uso por mesa, esperas, ticket, incidencias. Contratas, ampliamos por una causa concreta o retiramos el material. Sin dramas.</div></div></div>
     </div>
   </div>
 </section>
 
 <section id="futuro" class="tint">
   <div class="wrap" style="max-width:860px">
-    <div class="section-title"><h2>Hacia dónde vamos</h2>
-      <p class="muted">Empezamos por la mesa porque es donde más se nota. Lo siguiente lo marcan los locales que ya lo usan,
-      no un calendario. Sin fechas, por honestidad.</p></div>
+    <div class="rotulo sube">Hacia dónde vamos</div>
+    <div class="section-title sube"><h2>Sin fechas, por honestidad</h2>
+      <p class="muted">Empezamos por la mesa porque es donde más se nota. Lo siguiente lo marcan los locales que ya
+      lo usan, no un calendario.</p></div>
     <div class="grid g2">
-      <div class="card"><span class="tag green">Ahora</span><h3 style="margin-top:10px">La mesa</h3>
+      <div class="card sube"><span class="tag green">Ahora</span><h3 style="margin-top:10px">La mesa</h3>
         <p class="muted" style="font-size:14px;margin:0">Carta, pedido, llamada, estado, sala y cocina, cuña de madera, piloto medido.</p></div>
-      <div class="card"><span class="tag amber">Siguiente</span><h3 style="margin-top:10px">Conectar</h3>
-        <p class="muted" style="font-size:14px;margin:0">Conectores nativos con los TPV más usados (empezaremos por el que más pidan
-        los locales), pago con el móvil y varios locales en una cuenta.</p></div>
-      <div class="card"><span class="tag">Después</span><h3 style="margin-top:10px">Ahorrar tiempo de verdad</h3>
-        <p class="muted" style="font-size:14px;margin:0">Módulos para la cuña (lámpara, cargador), estados de mesa por NFC para el personal,
-        automatizaciones pequeñas y verificables sobre los datos de sala.</p></div>
-      <div class="card"><span class="tag">Horizonte</span><h3 style="margin-top:10px">Trastienda</h3>
-        <p class="muted" style="font-size:14px;margin:0">Costes y escandallos, inventario, personal y proveedores. Solo cuando haya
-        volumen de datos y locales que lo pidan y lo paguen; antes, integraremos con quien ya lo hace bien.</p></div>
+      <div class="card sube"><span class="tag amber">Siguiente</span><h3 style="margin-top:10px">Conectar</h3>
+        <p class="muted" style="font-size:14px;margin:0">Conectores con los TPV más usados —empezaremos por el que más
+        pidan los locales—, pago con el móvil y varios locales en una cuenta.</p></div>
+      <div class="card sube"><span class="tag">Después</span><h3 style="margin-top:10px">Ahorrar tiempo de verdad</h3>
+        <p class="muted" style="font-size:14px;margin:0">Módulos para la cuña, estados de mesa por NFC para el personal
+        y automatizaciones pequeñas y verificables sobre los datos de sala.</p></div>
+      <div class="card sube"><span class="tag">Horizonte</span><h3 style="margin-top:10px">Trastienda</h3>
+        <p class="muted" style="font-size:14px;margin:0">Costes y escandallos, inventario, personal y proveedores. Solo
+        cuando haya locales que lo pidan y lo paguen; antes, integramos con quien ya lo hace bien.</p></div>
     </div>
-  </div>
-</section>
-
-<section id="contacto">
-  <div class="wrap" style="max-width:620px">
-    <div class="section-title"><h2>¿Lo vemos en tu local?</h2>
-      <p class="muted">Escríbenos. Te lo enseñamos funcionando en tu propia mesa en 15 minutos, y si encaja arrancamos el piloto.</p></div>
-    <form class="card" id="lead">
-      <div class="field-row">
-        <div class="field"><label>Tu nombre</label><input id="l-name" required></div>
-        <div class="field"><label>Local</label><input id="l-venue"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Email</label><input id="l-email" type="email" required></div>
-        <div class="field"><label>Teléfono</label><input id="l-phone"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Población</label><input id="l-city"></div>
-        <div class="field"><label>Nº de mesas</label><input id="l-tables" type="number" min="1"></div>
-      </div>
-      <div class="field"><label>¿Qué te duele hoy en la sala?</label><textarea id="l-msg" rows="3" placeholder="Esperas en terraza, errores de comanda, falta de camareros…"></textarea></div>
-      <button class="btn primary block lg" id="l-go">Pedir un piloto</button>
-      <p class="muted" style="font-size:12px;margin:12px 0 0">Al enviar aceptas el <a href="/privacidad">aviso de privacidad</a>.
-      Usaremos tus datos solo para responderte.</p>
-    </form>
   </div>
 </section>
 
 <footer class="site">
   <div class="wrap">
     <div class="spread wrap-row">
-      <div><span class="logo">Maitre</span>
-        <div class="muted" style="font-size:13px">Sant Cugat del Vallès · hola@maitre.app</div></div>
+      <div><img src="/assets/logotipo-crema.png" alt="Maitre" style="width:120px"
+                onerror="this.replaceWith(Object.assign(document.createElement('strong'),{textContent:'Maitre'}))">
+        <div style="font-size:13px;margin-top:8px">Sant Cugat del Vallès · hola@maitre.app</div></div>
       <div class="row wrap-row">
-        <a class="link" href="/entrar">Entrar</a>
-        <a class="link" href="/alta">Dar de alta un local</a>
-        <a class="link" href="/privacidad">Privacidad</a>
+        <a href="/entrar">Entrar</a>
+        <a href="/alta">Dar de alta un local</a>
+        <a href="/privacidad">Privacidad</a>
       </div>
     </div>
     <div class="fse">
       <strong>Actuación cofinanciada por el Fondo Social Europeo Plus (FSE+) y la Generalitat de Catalunya</strong>
       en el marco del programa de subvenciones para favorecer el autoempleo de jóvenes.
-      <div style="margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">
         <span class="tag">Generalitat de Catalunya</span>
         <span class="tag">Unió Europea · FSE+</span>
         <span class="tag">Garantia Juvenil</span>
@@ -429,40 +390,11 @@
   </div>
 </footer>
 
-<script type="module">
-import { api, $, toast, money } from '/js/core.js';
+<div class="barra-pedido" id="barra">
+  <span class="resumen" id="resumen"></span>
+  <button class="btn primary" id="ver-pedido">Ver mi pedido</button>
+</div>
 
-$('#qr').innerHTML = `<img src="/api/public/bar-lancora/qr.png?size=200" onerror="this.style.display='none'" style="width:100%" alt="">`;
-
-const PRICE = { mesa: 1900, servicio: 3900 };
-const LIMIT = { mesa: 40, servicio: 80 };
-const calc = () => {
-  const tables = Math.max(1, Number($('#c-tables').value) || 1);
-  const plan = $('#c-plan').value;
-  const monthly = PRICE[plan];
-  const wedges = $('#c-wedge').value === '1' ? [tables * 900, tables * 1400] : null;
-  const porMesaDia = monthly / tables / 30;
-  $('#calc').innerHTML = `<strong>${money(monthly)} al mes + IVA</strong> — sale a
-    <strong>${money(porMesaDia)}</strong> por mesa y día.
-    <span class="muted">Menos que una servilleta.</span>
-    ${wedges ? `<br>Cuñas: un único pago orientativo de <strong>${money(wedges[0])} – ${money(wedges[1])}</strong> + IVA por ${tables} piezas, a coste completo.` : ''}
-    ${tables > LIMIT[plan] ? `<br><span class="muted">Con más de ${LIMIT[plan]} mesas te conviene el plan siguiente o un precio a medida.</span>` : ''}`;
-};
-['c-tables', 'c-plan', 'c-wedge'].forEach((id) => $('#' + id).oninput = calc);
-calc();
-
-$('#lead').onsubmit = async (e) => {
-  e.preventDefault();
-  const btn = $('#l-go'); btn.disabled = true;
-  try {
-    const r = await api('/api/leads', { method: 'POST', body: {
-      name: $('#l-name').value, venue_name: $('#l-venue').value, email: $('#l-email').value,
-      phone: $('#l-phone').value, city: $('#l-city').value, tables: $('#l-tables').value,
-      plan_interest: $('#c-plan').value, message: $('#l-msg').value,
-    } });
-    $('#lead').innerHTML = `<div class="notice ok">${r.message}</div>`;
-  } catch (err) { toast(err.message, 'err'); btn.disabled = false; }
-};
-</script>
+<script type="module" src="/js/web.js"></script>
 </body>
 </html>

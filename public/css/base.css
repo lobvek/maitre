@@ -306,3 +306,37 @@ tbody tr:last-child td { border-bottom: 0; }
   .card-head, .spread, .row { flex-wrap: wrap; }
   .movil-no { display: none !important; }
 }
+
+
+/* --- Hojas inferiores (sheets) ------------------------------------------
+   Nacieron en la carta del comensal y las usa también la web pública: es el
+   mismo gesto en los dos sitios, así que es la misma pieza. */
+.sheet-bg { position: fixed; inset: 0; background: rgba(35,36,28,.46); backdrop-filter: blur(3px);
+    z-index: 100; display: flex; align-items: flex-end; animation: fade .22s var(--ease); }
+  .sheet { background: var(--surface); width: 100%; max-height: 92vh; overflow: auto;
+    border-radius: 26px 26px 0 0; padding: 0 0 calc(16px + env(safe-area-inset-bottom));
+    animation: up .34s var(--ease-out); max-width: 660px; margin: 0 auto; box-shadow: var(--sh-3); }
+  @keyframes up { from { transform: translateY(100%); } }
+  .sheet { will-change: transform; touch-action: pan-y; }
+  .sheet-head { position: sticky; top: 0; background: var(--surface); padding: 22px 20px 12px; cursor: grab;
+    display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; border-bottom: 1px solid var(--line-2); }
+  .sheet-head::before { content: ''; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 42px; height: 4.5px; border-radius: 3px; background: var(--line); }
+  .sheet-head:active { cursor: grabbing; }
+  .sheet-body { padding: 18px 20px; }
+  .sheet-foot { position: sticky; bottom: 0; background: var(--surface); padding: 13px 20px;
+    border-top: 1px solid var(--line-2); display: flex; gap: 11px; align-items: center; }
+  .opt { display: flex; align-items: center; gap: 11px; padding: 12px 0; border-bottom: 1px solid var(--line-2); font-size: 14.8px; }
+  .opt:last-child { border-bottom: 0; }
+  .qty { display: flex; align-items: center; gap: 3px; border: 1px solid var(--line); border-radius: var(--r-pill); padding: 3px; }
+  .qty button { width: 34px; height: 34px; border: 0; background: transparent; cursor: pointer;
+    border-radius: 50%; color: var(--ink); display: grid; place-items: center;
+    transition: background var(--t) var(--ease-micro), transform var(--t-fast) var(--ease-micro); }
+  .qty button:active { transform: scale(.88); }
+  .qty button:hover { background: var(--g-50); }
+  .qty span { min-width: 24px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .line { display: flex; gap: 11px; padding: 13px 0; border-bottom: 1px solid var(--line-2); align-items: flex-start; }
+  .track { display: flex; gap: 5px; margin: 13px 0; }
+  .track div { flex: 1; height: 5px; border-radius: 4px; background: var(--line); transition: background var(--t-slow) var(--ease); }
+  .track div.on { background: var(--brand); }
