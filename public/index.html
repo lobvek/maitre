@@ -50,7 +50,7 @@ header.nav .logo img { width: 104px; display: block; }
 /* --- Portada: foto a sangre con cosas de verdad encima ------------------- */
 .portada { position: relative; min-height: min(92svh, 760px); display: flex; align-items: flex-end;
   color: var(--cream); overflow: hidden; isolation: isolate; }
-.portada .foto { position: absolute; inset: 0; z-index: -2; background: var(--coffee) var(--foto-hero, none) center/cover no-repeat;
+.portada .foto { position: absolute; inset: 0; z-index: -2; background: var(--coffee) var(--foto-hero, url(/assets/fotos/hero.jpg)) center/cover no-repeat;
   transform: scale(1.06); animation: respira 18s ease-in-out infinite alternate; }
 @keyframes respira { to { transform: scale(1); } }
 /* Sin foto todavía: degradado de marca para que nada se vea roto */
@@ -248,7 +248,7 @@ footer.site .fse { margin-top: 30px; font-size: 11.5px; line-height: 1.6;
   </div>
 </section>
 
-<div class="banda grano" style="--img:var(--foto-sala, none)">
+<div class="banda grano" style="--img:url(/assets/fotos/sala.jpg)">
   <div class="foto"></div><div class="velo"></div>
   <div class="wrap">
     <h2>«No te voy a cambiar el TPV.»</h2>

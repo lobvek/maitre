@@ -80,7 +80,10 @@ function seedVenue({ slug, name, city, address, plan, isPilot, color, carta, tab
     pilot: JSON.stringify(pilot),
     tax_rate: 1000, prices_include_tax: 1,
     languages: JSON.stringify(['es', 'ca', 'en']),
-    features: JSON.stringify({ calls: true, orders: true, guest_name: true, notes: true }),
+    // beta_payments solo aquí: los locales de muestra enseñan el cobro con el proveedor
+    // de pruebas (no cobra nada). Un local de verdad lo sigue teniendo apagado.
+    features: JSON.stringify({ calls: true, orders: true, guest_name: true, notes: true, beta_payments: true }),
+    payment_mode: 'online_optional',
     wifi_ssid: `${slug}-wifi`, wifi_password: 'hola1234',
     service_note: 'Los pedidos llegan directamente a barra. Si necesitas algo, usa el botón de aviso.',
   });

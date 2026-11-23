@@ -246,6 +246,16 @@ El detalle, con ejemplo de carga útil y verificación de firma, está en [`docs
 | `MAITRE_BACKUP_KEEP` | `14` | Cuántas copias de seguridad se conservan |
 | `NODE_ENV` | — | Con `production` la cookie de sesión exige HTTPS |
 
+## El pase de prototipado
+
+Para enseñar el software en la mesa de un bar: abre cualquier pantalla con **`?tour=1`**
+(lo normal es empezar por `/panel?tour=1`). Son doce pasos que saltan solos de la carta del
+comensal a la pantalla de sala y al panel, y en cada uno dice **qué contar** y **qué tocar**.
+Se sale con Esc. El guion de la visita entera está en [`docs/guion-visitas.md`](docs/guion-visitas.md).
+
+Los locales de muestra llevan encendido el **cobro en modo de prueba**, para poder enseñar el
+pago desde el móvil sin que exista dinero de por medio. Un local de verdad lo tiene apagado.
+
 ## Copias de seguridad
 
 El servidor hace una copia al arrancar y otra cada 24 horas en `data/backups/`, con `VACUUM INTO`

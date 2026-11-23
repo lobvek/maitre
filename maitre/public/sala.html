@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sala · Maitre</title>
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  body { background: #f2efe8; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+  .bar { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: var(--surface); border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+  .bar h1 { font-size: 17px; margin: 0; }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--green); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
+  .dot.off { background: var(--red); animation: none; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { padding: 7px 14px; border-radius: 100px; border: 0; background: transparent; font: 600 13.5px var(--sans); cursor: pointer; color: var(--ink-2); }
+  .tabs button.on { background: var(--ink); color: #fff; }
+
+  #calls { flex: none; display: flex; gap: 10px; padding: 0 18px; overflow-x: auto; }
+  #calls:not(:empty) { padding: 12px 18px; background: var(--amber-soft); border-bottom: 1px solid #f0dfb0; }
+  .call { display: flex; align-items: center; gap: 10px; background: var(--surface); border-radius: 100px; padding: 7px 8px 7px 16px; box-shadow: var(--shadow); font-size: 14px; white-space: nowrap; }
+
+  main { flex: 1; overflow: auto; padding: 18px; }
+  .cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; height: 100%; }
+  .col { display: flex; flex-direction: column; min-height: 0; }
+  .col h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-family: var(--sans); font-weight: 700; margin: 0 0 10px; display: flex; justify-content: space-between; }
+  .col .list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+
+  .ticket { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
+  .ticket.new { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-soft), var(--shadow); animation: pulse .5s ease 2; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px var(--green-soft), var(--shadow); } }
+  .ticket.late { border-color: var(--red); }
+  .ticket header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line-2); background: var(--surface-2); }
+  .ticket .mesa { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+  .ticket ul { list-style: none; margin: 0; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 14px; }
+  .ticket li { display: flex; gap: 8px; }
+  .ticket li b { flex: none; min-width: 20px; }
+  .ticket .opts { color: var(--ink-3); font-size: 12.5px; }
+  .ticket footer { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line-2); align-items: center; }
+  .clock { font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink-3); }
+  .clock.warn { color: var(--amber); font-weight: 700; }
+  .clock.bad { color: var(--red); font-weight: 700; }
+
+  .mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .mesa-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; cursor: pointer; text-align: center; box-shadow: var(--shadow); transition: .15s; }
+  .mesa-card:hover { transform: translateY(-2px); }
+  .mesa-card .n { font-family: var(--serif); font-size: 26px; font-weight: 600; }
+  .mesa-card.occupied { border-color: var(--green); background: var(--green-soft); }
+  .mesa-card.reserved { border-color: var(--blue); background: var(--blue-soft); }
+  .mesa-card.cleaning { border-color: var(--amber); background: var(--amber-soft); }
+  .st { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); padding: 2px 0; }
+  #printarea { display: none; }
+  @media print {
+    body > *:not(#printarea) { display: none !important; }
+    #printarea { display: block; font-family: var(--mono); }
+    #printarea h2 { font-family: var(--sans); }
+    @page { margin: 8mm; }
+  }
+  @media (max-width: 1100px) { .cols { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 720px) {
+    .bar { gap: 8px; padding: 8px 12px; }
+    .bar h1 { font-size: 15px; width: 100%; }
+    .bar .grow { display: none; }
+    main { padding: 12px; }
+  }
+  @media (max-width: 620px) { .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1 id="venue">Sala</h1>
+  <span class="live"><span class="dot" id="dot"></span><span id="livetxt">en directo</span></span>
+  <div class="tabs">
+    <button data-tab="tickets" class="on">Pedidos</button>
+    <button data-tab="mesas">Mesas</button>
+  </div>
+  <select id="station" style="width:auto;padding:6px 10px;font-size:13px;border-radius:100px">
+    <option value="">Todo</option>
+    <option value="barra">Solo barra</option>
+    <option value="cocina">Solo cocina</option>
+  </select>
+  <span class="grow"></span>
+  <span id="gate"></span>
+  <button class="btn sm" id="agotados" title="Marcar productos agotados">86</button>
+  <button class="btn sm" id="sound" title="Aviso sonoro">🔔</button>
+  <button class="btn sm" id="new-order">+ Pedido</button>
+  <a class="btn sm ghost" href="/panel">Panel</a>
+</div>
+<div id="calls"></div>
+<main>
+  <div id="tickets" class="cols"></div>
+  <div id="mesas" class="hidden"></div>
+</main>
+<div id="printarea"></div>
+<script type="module" src="/js/sala.js"></script>
+</body>
+</html>

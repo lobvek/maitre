@@ -79,6 +79,13 @@ export function loader(msg = 'Poniendo la cafetera…') {
 }
 
 /** Escapa texto para interpolarlo en HTML. */
+// El pase de prototipado se engancha solo donde haga falta: ?tour en cualquier
+// pantalla del software lo arranca, y se mantiene al saltar de una a otra.
+try {
+  const hayTour = new URLSearchParams(location.search).has('tour') || sessionStorage.getItem('maitre_tour');
+  if (hayTour && /^\/(m|sala|panel)/.test(location.pathname)) import('/js/tour.js');
+} catch { /* sin sessionStorage: sin recorrido, y ya está */ }
+
 // --- Soporte -----------------------------------------------------------------
 // El soporte de Maitre va por WhatsApp, no por formulario: un bar en hora punta no
 // rellena un ticket, manda un audio. El enlace lleva el contexto ya escrito para que
