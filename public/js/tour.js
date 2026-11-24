@@ -8,6 +8,9 @@
    Se enciende poniendo ?tour en cualquier pantalla. Se sale con Esc.
    ========================================================================== */
 const CLAVE = 'maitre_tour';
+/* Marca de los saltos que hace el propio recorrido. Abrirlo a mano con ?tour=1
+   siempre empieza por el principio; esto es lo único que continúa donde iba. */
+const SEGUIR = 'seguir';
 
 /* Cada paso: dónde ocurre, qué señalar, qué decir y qué hacer.
    `decir` es para quien enseña; `hacer`, la acción concreta. */
@@ -185,27 +188,27 @@ async function ir(i) {
 
 /** La dirección de cada pantalla. La carta usa la primera mesa del local de verdad. */
 async function url(paso) {
-  if (paso.en === 'sala') return '/sala?tour=1';
-  if (paso.en === 'panel') return `/panel?tour=1${paso.hash || ''}`;
+  if (paso.en === 'sala') return `/sala?tour=${SEGUIR}`;
+  if (paso.en === 'panel') return `/panel?tour=${SEGUIR}${paso.hash || ''}`;
   try {
     const r = await fetch('/api/tables', { credentials: 'same-origin' });
     const d = await r.json();
     const mesa = d.tables?.[0];
-    if (mesa?.url) return `${new URL(mesa.url).pathname}?tour=1`;
+    if (mesa?.url) return `${new URL(mesa.url).pathname}?tour=${SEGUIR}`;
   } catch { /* sin sesión: no pasa nada */ }
-  return '/m/bar-lancora/zRUufoh2?tour=1';
+  return `/m/bar-lancora/zRUufoh2?tour=${SEGUIR}`;
 }
 
 // --- Arranque ---------------------------------------------------------------
 export function arrancar() {
   if (!dondeEstoy()) return;
-  const guardado = leer();
-  const i = guardado >= 0 ? guardado : 0;
-  // Si el paso guardado es de otra pantalla, se respeta dónde está el usuario.
-  const aqui = PASOS[i]?.en === dondeEstoy() ? i : PASOS.findIndex((p) => p.en === dondeEstoy());
-  guardar(aqui < 0 ? i : aqui);
-  const pintarCuando = () => ir(aqui < 0 ? i : aqui);
-  setTimeout(pintarCuando, 900);   // deja que la pantalla termine de cargar
+  const pedido = new URLSearchParams(location.search).get('tour');
+  // Abrirlo a mano empieza por el paso 1, caiga donde caiga la pantalla: si no,
+  // enganchar el enlace del panel te dejaba en mitad del guion.
+  const desdeCero = pedido !== null && pedido !== SEGUIR;
+  const i = desdeCero ? 0 : Math.max(0, leer());
+  guardar(i);
+  setTimeout(() => ir(i), 900);   // deja que la pantalla termine de cargar
 
   for (const ev of ['scroll', 'resize']) {
     addEventListener(ev, () => document.querySelector('#tour')?._seguir?.(), { passive: true });
