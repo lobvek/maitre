@@ -97,6 +97,106 @@ banco, no fiarse de comparadores.
   propósito: en el momento en que Maitre emita facturas entra en VERI*FACTU, y eso es otro
   proyecto. El ticket lo sigue dando el TPV del bar.
 
+## 0 ter. ¿Se puede cobrar por el datáfono que ya tiene el bar?
+
+Esta es **la** pregunta, y la respuesta tiene dos mitades: una que no, y una que sí.
+
+### La mitad que no: el datáfono no se puede disparar desde nuestra plataforma
+
+Un datáfono cobra **cuando la tarjeta está delante**. No existe una forma de decirle
+"cóbrale 5 € al móvil de la mesa 4", porque el datáfono no tiene ninguna manera de llegar
+hasta ese móvil. La tarjeta tiene que acercarse **a esa máquina**. No es que los bancos no
+hayan hecho la API: es que no hay nada que la API pueda hacer.
+
+### Por qué hay dos precios y no uno
+
+No es que el banco sea más caro online por capricho. Son **dos productos distintos con dos
+riesgos distintos**:
+
+| | Presencial (el datáfono) | Comercio electrónico (online) |
+|---|---|---|
+| La tarjeta está | delante, se acerca al aparato | en otro sitio, solo hay un número |
+| Si el cliente dice "yo no he pagado eso" | lo come el banco | **lo come el comercio** |
+| Comisión | ~0,4–0,9 % | más alta |
+
+Por eso el banco **no deja** pasar cobros online por el contrato del datáfono: es otro
+contrato, no un ajuste. Y por eso la diferencia de comisión es real y no negociable del
+todo: alguien está asumiendo un riesgo que antes no asumía.
+
+### La mitad que sí, y es la que buscabas: el TPV Virtual del mismo banco
+
+Lo que quieres existe y se llama **TPV Virtual** (va por Redsys). Es exactamente lo que
+pedías, salvo que no es la caja física:
+
+- **El mismo banco.** CaixaBank o Sabadell, el que ya tenga.
+- **La misma cuenta.** El dinero le entra donde le entra ya.
+- **La misma relación.** Lo pide en su oficina, con su gestor.
+- **Y la comisión del banco, no la de Stripe**: Sabadell lo publica a **0,40 % + 0,06 €**
+  por operación hasta 2.000 €/mes.
+- **Admite Apple Pay y Google Pay**, que es la experiencia que describes: el cliente le da,
+  Face ID, y ya. (Depende del contrato de cada banco: hay que pedirlo explícitamente.)
+
+O sea: tu instinto es el correcto —**ir por el banco y no por Stripe**— solo que la puerta
+no es el aparato, es el producto hermano del aparato.
+
+### Y para tickets de dos cañas, probablemente Bizum
+
+Lo que mata los importes pequeños es el **fijo por operación**. Bizum por el banco se cita
+en torno al **0,60 % sin fijo** (BBVA lo publica así), y en España lo tiene instalado todo
+el mundo. Sobre 5 € son **tres céntimos**.
+
+| Cobrar 5 € (dos cañas) | Comisión | Sobre la venta |
+|---|---|---|
+| **Bizum por el banco** (~0,60 %) | **0,03 €** | **0,6 %** |
+| Su datáfono de siempre | ~0,04 € | ~0,8 % |
+| TPV Virtual Sabadell (0,40 % + 0,06 €) | 0,08 € | 1,6 % |
+| Tap to Pay con el móvil del camarero (~1,5 %) | 0,08 € | 1,5 % |
+| **Stripe** (1,5 % + 0,25 €) | **0,33 €** | **6,5 %** |
+
+Stripe es **diez veces** más caro que Bizum en un ticket de dos cañas. En uno de 40 € la
+diferencia baja a tres veces. El fijo de 0,25 € es todo el problema.
+
+### Para el efectivo: si el camarero va a ir igual, que vaya con un datáfono en el bolsillo
+
+Dices, y es verdad, que para el efectivo tiene que ir el camarero. Entonces merece la pena
+saber esto: **Tap to Pay on iPhone ya funciona en España**, desde el iPhone XS, sin ningún
+aparato extra. El móvil del camarero **es** el datáfono: el cliente acerca su tarjeta o su
+móvil al del camarero y se cobra.
+
+La comisión la pone el proveedor, no Apple: SumUp ~1,5 %, Stripe 1,4 % + 0,10 € en
+presencial. No es gratis, pero es **presencial**, así que es mucho más barato que el mismo
+Stripe online, y el bar se ahorra comprar datáfonos para la terraza.
+
+Esto no lo tenemos que programar nosotros: es una app aparte en el móvil del camarero. Pero
+es la respuesta buena a "¿y si quiere pagar con tarjeta pero no por el móvil?".
+
+### Qué hay que preguntar en el banco, literal
+
+Esto se puede hacer esta semana y vale más que cualquier cosa que yo programe:
+
+1. ¿Cuánto cuesta el **TPV Virtual** (comercio electrónico) y qué cuota de mantenimiento
+   tiene? Sabadell publica 17 €/mes mientras no se pasen de 2.000 €/mes: **¿es además de
+   la comisión o en lugar de?** De esto depende todo.
+2. ¿Incluye **Bizum**? ¿A qué comisión, y con qué fijo si lo hay?
+3. ¿Incluye **Apple Pay y Google Pay**?
+4. ¿Cuánto tarda el alta y qué papeles hacen falta?
+5. ¿Se puede tener el TPV Virtual **en la misma cuenta** que el datáfono?
+
+Con esas cinco respuestas de un banco ya se sabe si merece la pena montar Redsys antes o
+después de Stripe. Hoy no lo sabemos, y los comparadores no sirven: Redsys **no pone
+precio**, lo pone cada banco y se negocia.
+
+### Qué significa esto para el código: casi nada
+
+La pasarela está aislada a propósito en un solo fichero (`server/payments.js`), detrás de
+una variable. Añadir Redsys es **ese fichero y una pantalla de ajustes** donde el bar meta
+sus datos de comercio (código FUC, terminal y clave secreta). El resto —el pedido, la
+cuenta, los avisos, la mesa— no se toca.
+
+Lo único que cambia de verdad es **el alta**: Stripe se monta en diez minutos y Redsys son
+semanas de papeleo por bar. Por eso la secuencia sensata sigue siendo Stripe para el
+prototipo y los primeros pilotos, y Redsys para el bar que cobre volumen de verdad.
+
 ## 1. El aviso que más importa: Sunday se fue de España
 
 Sunday —la referencia mundial del pago por QR en mesa, del grupo Big Mamma— **cerró en
@@ -172,4 +272,6 @@ sabemos por dónde empezar. Sin esas cinco respuestas, cualquier conector es una
 - [TPV Virtual de Banco Sabadell](https://www.bancsabadell.com/bsnacional/en/business/tpv/tpv-virtual/) · [comisiones de TPV por banco](https://rankiabusiness.com/comisiones-tpv/)
 - [Qué es Redsys y quién pone el precio](https://ecomninja.net/que-es/redsys/) · [Redsys vs Stripe](https://namuratech.com/blog/mejor-pasarela-pago-ecommerce)
 - [SumUp vs Stripe](https://www.sumup.com/es-es/compare/sumup-vs-stripe/)
+- [TPV virtual de BBVA, comisión de Bizum](https://finantres.com/bbva-tpv-virtual/) · [Bizum salta al comercio físico (abril 2026)](https://www.merca2.es/2026/04/24/bizum-pago-comercios-tpv-fecha-2372317/)
+- [Tap to Pay on iPhone en España](https://www.applesfera.com/servicios-apple/tu-iphone-puede-ser-datafono-no-necesitas-ningun-accesorio-apple-lanza-tap-to-pay-espana) · [la comisión la pone el proveedor](https://easybyte.es/blog/cobrar-con-el-movil-sin-datafono-tap-to-pay/) · [Tap to Pay de SumUp](https://www.sumup.com/es-es/business-guide/como-aceptar-pagos-en-el-iphone/)
 - [¿Es legal cobrar más por tarjeta? (Qamarero)](https://qamarero.com/blog/es-legal-cobrar-mas-por-tarjeta-en-restaurante/)
