@@ -1,6 +1,101 @@
 # Pagos y conexión con el TPV: cómo lo hacen otros y qué hacemos nosotros
 
-Actualizado el 09-10-2026.
+Actualizado el 25-11-2026. Las tarifas son de noviembre de 2026 y hay que reconfirmarlas
+antes de firmar nada.
+
+## 0. Cómo funciona por dentro, en funcional
+
+### El dinero no pasa nunca por Maitre
+
+Esto no es una opción, es la base de todo: **cada bar conecta su propia cuenta de la
+pasarela y el dinero va directo a él.** Maitre no lo toca, no lo retiene y no guarda
+tarjetas. Tres motivos, cualquiera de ellos definitivo:
+
+1. Si el dinero pasara por nosotros, seríamos legalmente una **entidad de pago**: licencia,
+   capital mínimo, auditorías. Ni de broma.
+2. Nos comeríamos las **devoluciones y reclamaciones** de las ventas de otros.
+3. Al bar le cuadra la caja: el ingreso le entra en **su** banco, con **su** nombre.
+
+Lo que hace Maitre es abrir el cobro y esperar la confirmación firmada de la pasarela.
+Está aislado en un solo fichero a propósito, para poder cambiar de pasarela sin tocar
+nada más.
+
+### Los tres modos, y el bar elige (ya está hecho)
+
+En Ajustes hay un desplegable con tres opciones:
+
+| Modo | Qué pasa | Para quién |
+|---|---|---|
+| **Se paga en el local, como siempre** | Maitre suma el pedido a la cuenta de la mesa. El camarero cobra en el TPV como toda la vida. **Comisión: cero.** | el 90 % de los bares, y es el que viene puesto |
+| **El cliente elige** | Puede pagar con el móvil o esperar al camarero | terrazas, sitios con mucha rotación |
+| **Se paga antes de mandarlo a barra** | El pedido **no llega a la cocina** hasta que entra el dinero | festivales, eventos, barras con fugas |
+
+Lo importante de esto: **la mayor parte del valor de Maitre no necesita cobrar nada.**
+Recibir la comanda en la barra, el aviso al móvil y la carta que se cambia sola funcionan
+igual con comisión cero. El cobro es una función más, no el producto.
+
+### Las dos cañas: lo que de verdad decide el coste
+
+La pregunta no es "qué pasarela", es **cuántas veces se cobra**. Casi todas las pasarelas
+cobran un fijo por operación, y ese fijo es el que mata los tickets pequeños:
+
+| | Dos cañas (5 €) | Un pedido (14 €) | La cuenta entera (40 €) |
+|---|---|---|---|
+| Comisión Stripe | 0,33 € | 0,46 € | 0,85 € |
+| **Sobre la venta** | **6,5 %** | 3,3 % | **2,1 %** |
+
+Una mesa que pide seis veces de cinco euros paga **1,95 €** de comisión. La misma mesa
+pagando una sola vez al final: **0,85 €**. Menos de la mitad, por hacer lo que el bar ya
+hace de siempre.
+
+Conclusión funcional, y es la decisión de diseño que hay que tomar:
+**se cobra la cuenta al final, no cada ronda.** Coincide con cómo funciona un bar y es lo
+más barato. "Pagar al pedir" se reserva para donde hace falta de verdad: festivales y
+barras donde la gente se va sin pagar.
+
+**Esto es lo que falta por construir.** Hoy el cobro con el móvil es **por pedido**; pagar
+la cuenta entera de la mesa de una vez no está hecho. La cuenta ya se calcula y el cliente
+ya la ve en su móvil (con las mesas unidas incluidas), así que es enganchar el cobro a lo
+que ya existe. Es el siguiente trozo de trabajo si los pagos siguen adelante.
+
+## 0 bis. ¿Stripe? Sí para empezar, pero no es la más barata
+
+Lo de "comisiones de la hostia" es verdad, y hay alternativas mucho más baratas:
+
+| Pasarela | Un ticket de 5 € | Uno de 25 € | Dar de alta a un bar |
+|---|---|---|---|
+| **TPV virtual del banco** (Redsys) | ~0,08 € (1,6 %) | ~0,16 € (**0,64 %**) | semanas, papeleo en su oficina |
+| **SumUp** | 0,10 € (1,95 %) | 0,49 € (1,95 %) | online, días |
+| **Stripe** | 0,33 € (**6,5 %**) | 0,63 € (2,5 %) | online, **10 minutos** |
+
+El TPV virtual de Banco Sabadell está publicado a **0,40 % + 0,06 €** por operación hasta
+2.000 €/mes (después, 1,10 % + 0,06 €). Eso es **cuatro veces más barato que Stripe**. Hay
+que preguntar por la cuota de mantenimiento, que según su web es de 17 €/mes mientras no
+se pase de esos 2.000 €, porque esa cuota puede darle la vuelta a la cuenta en un bar que
+cobre poco por el móvil. Redsys no pone precio: lo pone cada banco, y se negocia.
+
+**Entonces por qué Stripe primero:** porque un bar se da de alta **en diez minutos, sin ir
+al banco**. Con cinco pilotos, la diferencia de comisión son unos pocos euros al mes; no
+vale la pena cambiarlos por tres semanas de papeleo por bar y perder el impulso de la
+visita. Y como la pasarela está aislada en un fichero, añadir Redsys después es un rato,
+no una reescritura.
+
+La frase para la visita, cuando el hostelero pregunte: *"Empezamos con Stripe, que se monta
+hoy. Si acabas cobrando mucho por el móvil, te interesa pedir el TPV virtual a tu banco:
+te sale cuatro veces más barato y te lo enganchamos nosotros."* Eso es verdad y le da el
+control.
+
+**Falta comprobar Bizum.** En España lo usa todo el mundo y va por Redsys; si la comisión
+es la que se dice, para tickets pequeños sería la opción buena. Hay que preguntarlo en el
+banco, no fiarse de comparadores.
+
+### Dos cosas legales que no se pueden saltar
+
+- **No se puede cobrar un recargo al cliente por pagar con tarjeta.** En España está
+  prohibido. La comisión se la come el bar o nos la comemos nosotros; no hay tercera vía.
+- **La cuenta de Maitre es un resumen de consumo, no un ticket fiscal.** Está hecho así a
+  propósito: en el momento en que Maitre emita facturas entra en VERI*FACTU, y eso es otro
+  proyecto. El ticket lo sigue dando el TPV del bar.
 
 ## 1. El aviso que más importa: Sunday se fue de España
 
@@ -43,25 +138,23 @@ Por eso la estrategia es, por orden:
 3. **Cuando lo pidan diez: conector nativo**, empezando por el TPV más repetido entre
    nuestros locales. Primero Glop o Revo, que son los que tienen API documentada.
 
-## 4. ¿Y si cobramos con Stripe en vez de integrar el TPV?
+## 4. Cobrar y integrar el TPV son cosas distintas
 
-Son cosas distintas y conviene no mezclarlas:
+Conviene no mezclarlas, porque resuelven problemas de dos personas distintas:
 
-- **Integrar el TPV** resuelve el trabajo del camarero.
-- **Cobrar con Stripe** resuelve el pago del cliente, pero **no mete la venta en el TPV**:
-  el bar sigue teniendo que cuadrar la caja, y encima con dinero que entró por otro sitio.
+- **Integrar el TPV** le quita trabajo al **camarero**.
+- **Cobrar con el móvil** le quita una espera al **cliente**, pero **no mete la venta en el
+  TPV**: el bar sigue teniendo que cuadrar la caja, y encima con dinero que entró por otro
+  sitio.
 
-Si cobramos y no integramos, le creamos un problema contable al bar. Por eso el cobro con
-el móvil solo tiene sentido **después** del conector, no antes.
+Esa es la pega de verdad del cobro online, más que la comisión: **si cobramos y no
+integramos, le creamos un lío contable al bar.** Mientras no haya conector, el camarero
+tiene que meter a mano en el TPV una venta que ya está pagada, marcándola como cobrada por
+otro medio. Es asumible en un bar pequeño y es un problema en uno con volumen.
 
-Números, para dimensionar: Stripe en España cobra como referencia pública **1,5 % + 0,25 €**
-por tarjeta europea. Sobre un ticket de 25 €, unos 0,63 €. Y en España **está prohibido
-repercutir ese coste al cliente** con un recargo, así que se lo come el local o nos lo
-comemos nosotros.
-
-Añadido legal que no se puede ignorar: desde el momento en que Maitre cobra, se acerca al
-terreno de la facturación (VERI*FACTU). Hoy lo evitamos a propósito: la cuenta de Maitre es
-**un resumen de consumo, no un ticket fiscal**.
+Por eso, en los pilotos, el modo recomendado es **"se paga en el local"**. El cobro con el
+móvil se activa cuando el bar lo pida por un motivo concreto (una terraza con fugas, una
+barra de evento), no porque esté en la lista de funciones.
 
 ## 5. Lo que hay que hacer antes de tocar nada de esto
 
@@ -75,5 +168,8 @@ sabemos por dónde empezar. Sin esas cinco respuestas, cualquier conector es una
 - [Glop + Lymon: pedidos QR](https://www.lymon.es/blog/glop-tpv-lymon-pedidos-qr)
 - [Camarero10 TPV](https://www.camarero10.com/software-tpv-bares-restaurantes/)
 - [Last.app: nuevo pricing del QR](https://www.last.app/actualizaciones-de-producto/el-nuevo-pricing-del-qr-cuanto-mas-vendes-menos-pagas)
-- [Tarifas de Stripe](https://stripe.com/pricing)
+- [Tarifas de Stripe](https://stripe.com/pricing) · [calculadora 1,5 % + 0,25 €](https://www.smartcookieapp.com/es/resources/guides/stripe-fee-calculator)
+- [TPV Virtual de Banco Sabadell](https://www.bancsabadell.com/bsnacional/en/business/tpv/tpv-virtual/) · [comisiones de TPV por banco](https://rankiabusiness.com/comisiones-tpv/)
+- [Qué es Redsys y quién pone el precio](https://ecomninja.net/que-es/redsys/) · [Redsys vs Stripe](https://namuratech.com/blog/mejor-pasarela-pago-ecommerce)
+- [SumUp vs Stripe](https://www.sumup.com/es-es/compare/sumup-vs-stripe/)
 - [¿Es legal cobrar más por tarjeta? (Qamarero)](https://qamarero.com/blog/es-legal-cobrar-mas-por-tarjeta-en-restaurante/)
