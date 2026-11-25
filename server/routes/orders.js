@@ -148,10 +148,9 @@ router.get('/table/:tableId/bill', (req, res) => {
 router.post('/table/:tableId/close', (req, res) => {
   const table = get('SELECT * FROM tables WHERE id = ? AND venue_id = ?', Number(req.params.tableId), req.venue.id);
   if (!table) return bad(res, 'Mesa no encontrada.', 404);
-  const bill = tableBill(req.venue, table.id);
   // Se cobra lo pendiente y se cierran también los pedidos que ya venían pagados desde el móvil.
   const abiertos = all(
-    `SELECT id, payment_status FROM orders WHERE venue_id = ? AND table_id = ?
+    `SELECT id, payment_status, total_cents FROM orders WHERE venue_id = ? AND table_id = ?
        AND status IN ('new','accepted','preparing','served') AND payment_status NOT IN ('pending','failed')`,
     req.venue.id, table.id);
   for (const o of abiertos) {
@@ -160,12 +159,15 @@ router.post('/table/:tableId/close', (req, res) => {
       paymentMethod: o.payment_status === 'paid' ? undefined : (req.body.payment_method || 'cash'),
     });
   }
+  // El importe se cuenta sobre lo que se ha cerrado de verdad, no sobre lo que decía la
+  // cuenta: si no, el mensaje al camarero puede decir un número que no ha entrado en caja.
+  const cobrado = abiertos.reduce((n, o) => n + o.total_cents, 0);
   run(`UPDATE calls SET status = 'done', resolved_at = ?, resolved_by = ? WHERE table_id = ? AND status = 'open'`,
     nowSql(), req.user.id, table.id);
   run(`UPDATE tables SET status = 'cleaning', status_changed_at = ? WHERE id = ?`, nowSql(), table.id);
-  audit(req.venue.id, req.user.id, 'table.closed', 'table', table.id, { total: euros(bill.total_cents) });
+  audit(req.venue.id, req.user.id, 'table.closed', 'table', table.id, { total: euros(cobrado) });
   publish(venueChannel(req.venue.id), 'table.updated', get('SELECT * FROM tables WHERE id = ?', table.id));
-  res.json({ ok: true, charged_cents: bill.total_cents, orders: bill.orders.length });
+  res.json({ ok: true, charged_cents: cobrado, orders: abiertos.length });
 });
 
 /** Marca un aviso como atendido. */

@@ -250,10 +250,13 @@ export function tableBill(venue, tableId) {
   const principal = mesa?.merged_into || Number(tableId);
   // Si hay mesas unidas a esta, su consumo entra en la misma cuenta.
   const ids = [principal, ...all('SELECT id FROM tables WHERE merged_into = ?', principal).map((t) => t.id)];
+  // Un cobro a medias (`pending`) o rechazado (`failed`) no es una consumición: el local
+  // no lo ve en sala y no puede cobrarlo, así que tampoco puede sumar en la cuenta. Si
+  // suma, el camarero cobra la mesa y la cuenta se queda con un fantasma dentro.
   const orders = all(
     `SELECT * FROM orders WHERE venue_id = ? AND table_id IN (${ids.map(() => '?').join(',')})
        AND status IN ('new','accepted','preparing','served')
-       AND payment_status != 'paid' ORDER BY id`, venue.id, ...ids).map(hydrateOrder);
+       AND payment_status NOT IN ('paid','pending','failed') ORDER BY id`, venue.id, ...ids).map(hydrateOrder);
   const sum = (k) => orders.reduce((n, o) => n + o[k], 0);
   return {
     orders,

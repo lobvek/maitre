@@ -360,6 +360,34 @@ describe('cobro del pedido antes de mandarlo a barra', () => {
     assert.equal(cuenta.data.total_cents, 0);
   });
 
+  test('un cobro abandonado no se queda dentro de la cuenta de la mesa', async () => {
+    const { venue, item, table } = await localConCobro('online_optional');
+
+    // Un cliente pide para pagar en la mesa.
+    await srv.request(`/api/public/${venue.slug}/${table.token}/order`, {
+      method: 'POST', cookies: false, body: { lines: [{ item_id: item.id, qty: 1 }], session_id: 'paga-en-mesa' },
+    });
+    // Otro elige pagar con el móvil y se queda a medias en la pasarela.
+    const abandonado = await srv.request(`/api/public/${venue.slug}/${table.token}/order`, {
+      method: 'POST', cookies: false,
+      body: { lines: [{ item_id: item.id, qty: 2 }], session_id: 'se-raja', payment_mode: 'online' },
+    });
+    assert.equal(abandonado.data.payment_status, 'pending');
+
+    // Lo que no ve el camarero tampoco puede sumarle en la cuenta.
+    const antes = await srv.request(`/api/orders/table/${table.id}/bill`);
+    assert.equal(antes.data.orders.length, 1, 'el pago a medias no entra en la cuenta');
+    assert.equal(antes.data.total_cents, 260);
+
+    // Y al cobrar la mesa, el importe que se informa es el que se ha cerrado de verdad.
+    const cierre = await srv.request(`/api/orders/table/${table.id}/close`, { method: 'POST', body: { payment_method: 'cash' } });
+    assert.equal(cierre.data.charged_cents, 260);
+    assert.equal(cierre.data.orders, 1);
+
+    const despues = await srv.request(`/api/orders/table/${table.id}/bill`);
+    assert.equal(despues.data.total_cents, 0, 'la cuenta queda a cero, sin fantasmas');
+  });
+
   test('un pago rechazado deja el pedido fuera de la cocina y se puede reintentar', async () => {
     const { venue, item, table } = await localConCobro('online_required');
     const pedido = await srv.request(`/api/public/${venue.slug}/${table.token}/order`, {
